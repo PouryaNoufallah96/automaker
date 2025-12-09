@@ -471,7 +471,7 @@ export function AgentView() {
 
         {/* Messages */}
         {!currentSessionId ? (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center" data-testid="no-session-placeholder">
             <div className="text-center">
               <Bot className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h2 className="text-lg font-semibold mb-2">

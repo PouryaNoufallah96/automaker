@@ -16,7 +16,7 @@
       "3. archive it",
       "4. expect empty state placeholder in right panel"
     ],
-    "status": "in_progress"
+    "status": "verified"
   },
   {
     "id": "feature-1765260557163-86b3tby5d",
@@ -37,7 +37,7 @@
     "category": "Kanban",
     "description": "show a error toast when concurrency limit is hit and someone tries to drag a card into in progress to give them feedback why it won't work.",
     "steps": [],
-    "status": "in_progress"
+    "status": "backlog"
   },
   {
     "id": "feature-1765260791341-iaxxt172n",
@@ -58,7 +58,7 @@
     "category": "Kanban",
     "description": "add a count up timer for showing how long the card has been in progress",
     "steps": [],
-    "status": "in_progress"
+    "status": "verified"
   },
   {
     "id": "feature-1765261027396-b78maajg7",

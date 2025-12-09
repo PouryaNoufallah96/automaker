@@ -47,7 +47,7 @@ function generateRandomSessionName(): string {
 
 interface SessionManagerProps {
   currentSessionId: string | null;
-  onSelectSession: (sessionId: string) => void;
+  onSelectSession: (sessionId: string | null) => void;
   projectPath: string;
   isCurrentSessionThinking?: boolean;
 }
@@ -141,6 +141,10 @@ export function SessionManager({
 
     const result = await window.electronAPI.sessions.archive(sessionId);
     if (result.success) {
+      // If the archived session was currently selected, deselect it
+      if (currentSessionId === sessionId) {
+        onSelectSession(null);
+      }
       await loadSessions();
     }
   };
@@ -357,6 +361,7 @@ export function SessionManager({
                     variant="ghost"
                     onClick={() => handleArchiveSession(session.id)}
                     className="h-7 w-7 p-0"
+                    data-testid={`archive-session-${session.id}`}
                   >
                     <Archive className="w-3 h-3" />
                   </Button>
