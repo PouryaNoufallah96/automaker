@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAppStore, DEFAULT_KEYBOARD_SHORTCUTS } from "@/store/app-store";
-import type { KeyboardShortcuts } from "@/store/app-store";
+import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,9 +40,9 @@ import {
   Settings2,
   RefreshCw,
   Info,
+  Keyboard,
 } from "lucide-react";
 import { getElectronAPI } from "@/lib/electron";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +52,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useSetupStore } from "@/store/setup-store";
+import { KeyboardMap, ShortcutReferencePanel } from "@/components/ui/keyboard-map";
+import { Checkbox } from "../ui/checkbox";
 
 // Navigation items for the side panel
 const NAV_ITEMS = [
@@ -84,9 +85,6 @@ export function SettingsView() {
     setShowProfilesOnly,
     currentProject,
     moveProjectToTrash,
-    keyboardShortcuts,
-    setKeyboardShortcut,
-    resetKeyboardShortcuts,
   } = useAppStore();
 
   // Compute the effective theme for the current project
@@ -108,6 +106,7 @@ export function SettingsView() {
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
@@ -155,6 +154,7 @@ export function SettingsView() {
   } | null>(null);
   const [activeSection, setActiveSection] = useState("api-keys");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showKeyboardMapDialog, setShowKeyboardMapDialog] = useState(false);
   const [isCheckingClaudeCli, setIsCheckingClaudeCli] = useState(false);
   const [isCheckingCodexCli, setIsCheckingCodexCli] = useState(false);
   const [apiKeyStatus, setApiKeyStatus] = useState<{
@@ -1608,376 +1608,35 @@ export function SettingsView() {
                   </h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Customize keyboard shortcuts for navigation and actions. Click
-                  on any shortcut to edit it.
+                  Customize keyboard shortcuts for navigation and actions using the visual keyboard map.
                 </p>
               </div>
-              <div className="p-6 space-y-6">
-                {/* Navigation Shortcuts */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Navigation
+              <div className="p-6">
+                {/* Centered message directing to keyboard map */}
+                <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                  <div className="relative">
+                    <Keyboard className="w-16 h-16 text-brand-500/30" />
+                    <div className="absolute inset-0 bg-brand-500/10 blur-xl rounded-full" />
+                  </div>
+                  <div className="space-y-2 max-w-md">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Use the Visual Keyboard Map
                     </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => resetKeyboardShortcuts()}
-                      className="text-xs h-7"
-                      data-testid="reset-shortcuts-button"
-                    >
-                      <RotateCcw className="w-3 h-3 mr-1" />
-                      Reset All to Defaults
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {[
-                      { key: "board" as keyof KeyboardShortcuts, label: "Kanban Board" },
-                      { key: "agent" as keyof KeyboardShortcuts, label: "Agent Runner" },
-                      { key: "spec" as keyof KeyboardShortcuts, label: "Spec Editor" },
-                      { key: "context" as keyof KeyboardShortcuts, label: "Context" },
-                      { key: "tools" as keyof KeyboardShortcuts, label: "Agent Tools" },
-                      { key: "profiles" as keyof KeyboardShortcuts, label: "AI Profiles" },
-                      { key: "settings" as keyof KeyboardShortcuts, label: "Settings" },
-                    ].map(({ key, label }) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between p-3 rounded-lg bg-sidebar-accent/10 border border-sidebar-border hover:bg-sidebar-accent/20 transition-colors"
-                      >
-                        <span className="text-sm text-foreground">{label}</span>
-                        <div className="flex items-center gap-2">
-                          {editingShortcut === key ? (
-                            <>
-                              <Input
-                                value={shortcutValue}
-                                onChange={(e) => {
-                                  const value = e.target.value.toUpperCase();
-                                  setShortcutValue(value);
-                                  // Check for conflicts
-                                  const conflict = Object.entries(keyboardShortcuts).find(
-                                    ([k, v]) => k !== key && v.toUpperCase() === value
-                                  );
-                                  if (conflict) {
-                                    setShortcutError(`Already used by ${conflict[0]}`);
-                                  } else {
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !shortcutError && shortcutValue) {
-                                    setKeyboardShortcut(key, shortcutValue);
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  } else if (e.key === "Escape") {
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                className="w-24 h-8 text-center font-mono"
-                                placeholder="Key"
-                                maxLength={2}
-                                autoFocus
-                                data-testid={`edit-shortcut-${key}`}
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  if (!shortcutError && shortcutValue) {
-                                    setKeyboardShortcut(key, shortcutValue);
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                disabled={!!shortcutError || !shortcutValue}
-                                data-testid={`save-shortcut-${key}`}
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  setEditingShortcut(null);
-                                  setShortcutValue("");
-                                  setShortcutError(null);
-                                }}
-                                data-testid={`cancel-shortcut-${key}`}
-                              >
-                                <AlertCircle className="w-4 h-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingShortcut(key);
-                                  setShortcutValue(keyboardShortcuts[key]);
-                                  setShortcutError(null);
-                                }}
-                                className={cn(
-                                  "px-3 py-1.5 text-sm font-mono rounded bg-sidebar-accent/20 border border-sidebar-border hover:bg-sidebar-accent/30 transition-colors",
-                                  keyboardShortcuts[key] !== DEFAULT_KEYBOARD_SHORTCUTS[key] &&
-                                    "border-brand-500/50 bg-brand-500/10 text-brand-400"
-                                )}
-                                data-testid={`shortcut-${key}`}
-                              >
-                                {keyboardShortcuts[key]}
-                              </button>
-                              {keyboardShortcuts[key] !== DEFAULT_KEYBOARD_SHORTCUTS[key] && (
-                                <span className="text-xs text-brand-400">(modified)</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {shortcutError && (
-                    <p className="text-xs text-red-400">{shortcutError}</p>
-                  )}
-                </div>
-
-                {/* UI Shortcuts */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    UI Controls
-                  </h3>
-                  <div className="space-y-2">
-                    {[
-                      { key: "toggleSidebar" as keyof KeyboardShortcuts, label: "Toggle Sidebar" },
-                    ].map(({ key, label }) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between p-3 rounded-lg bg-sidebar-accent/10 border border-sidebar-border hover:bg-sidebar-accent/20 transition-colors"
-                      >
-                        <span className="text-sm text-foreground">{label}</span>
-                        <div className="flex items-center gap-2">
-                          {editingShortcut === key ? (
-                            <>
-                              <Input
-                                value={shortcutValue}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setShortcutValue(value);
-                                  // Check for conflicts
-                                  const conflict = Object.entries(keyboardShortcuts).find(
-                                    ([k, v]) => k !== key && v === value
-                                  );
-                                  if (conflict) {
-                                    setShortcutError(`Already used by ${conflict[0]}`);
-                                  } else {
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !shortcutError && shortcutValue) {
-                                    setKeyboardShortcut(key, shortcutValue);
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  } else if (e.key === "Escape") {
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                className="w-24 h-8 text-center font-mono"
-                                placeholder="Key"
-                                maxLength={2}
-                                autoFocus
-                                data-testid={`edit-shortcut-${key}`}
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  if (!shortcutError && shortcutValue) {
-                                    setKeyboardShortcut(key, shortcutValue);
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                disabled={!!shortcutError || !shortcutValue}
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  setEditingShortcut(null);
-                                  setShortcutValue("");
-                                  setShortcutError(null);
-                                }}
-                              >
-                                <AlertCircle className="w-4 h-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingShortcut(key);
-                                  setShortcutValue(keyboardShortcuts[key]);
-                                  setShortcutError(null);
-                                }}
-                                className={cn(
-                                  "px-3 py-1.5 text-sm font-mono rounded bg-sidebar-accent/20 border border-sidebar-border hover:bg-sidebar-accent/30 transition-colors",
-                                  keyboardShortcuts[key] !== DEFAULT_KEYBOARD_SHORTCUTS[key] &&
-                                    "border-brand-500/50 bg-brand-500/10 text-brand-400"
-                                )}
-                                data-testid={`shortcut-${key}`}
-                              >
-                                {keyboardShortcuts[key]}
-                              </button>
-                              {keyboardShortcuts[key] !== DEFAULT_KEYBOARD_SHORTCUTS[key] && (
-                                <span className="text-xs text-brand-400">(modified)</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Shortcuts */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Actions
-                  </h3>
-                  <div className="space-y-2">
-                    {[
-                      { key: "addFeature" as keyof KeyboardShortcuts, label: "Add Feature" },
-                      { key: "addContextFile" as keyof KeyboardShortcuts, label: "Add Context File" },
-                      { key: "startNext" as keyof KeyboardShortcuts, label: "Start Next Features" },
-                      { key: "newSession" as keyof KeyboardShortcuts, label: "New Session" },
-                      { key: "openProject" as keyof KeyboardShortcuts, label: "Open Project" },
-                      { key: "projectPicker" as keyof KeyboardShortcuts, label: "Project Picker" },
-                      { key: "cyclePrevProject" as keyof KeyboardShortcuts, label: "Previous Project" },
-                      { key: "cycleNextProject" as keyof KeyboardShortcuts, label: "Next Project" },
-                      { key: "addProfile" as keyof KeyboardShortcuts, label: "Add Profile" },
-                    ].map(({ key, label }) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between p-3 rounded-lg bg-sidebar-accent/10 border border-sidebar-border hover:bg-sidebar-accent/20 transition-colors"
-                      >
-                        <span className="text-sm text-foreground">{label}</span>
-                        <div className="flex items-center gap-2">
-                          {editingShortcut === key ? (
-                            <>
-                              <Input
-                                value={shortcutValue}
-                                onChange={(e) => {
-                                  const value = e.target.value.toUpperCase();
-                                  setShortcutValue(value);
-                                  // Check for conflicts
-                                  const conflict = Object.entries(keyboardShortcuts).find(
-                                    ([k, v]) => k !== key && v.toUpperCase() === value
-                                  );
-                                  if (conflict) {
-                                    setShortcutError(`Already used by ${conflict[0]}`);
-                                  } else {
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !shortcutError && shortcutValue) {
-                                    setKeyboardShortcut(key, shortcutValue);
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  } else if (e.key === "Escape") {
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                className="w-24 h-8 text-center font-mono"
-                                placeholder="Key"
-                                maxLength={2}
-                                autoFocus
-                                data-testid={`edit-shortcut-${key}`}
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  if (!shortcutError && shortcutValue) {
-                                    setKeyboardShortcut(key, shortcutValue);
-                                    setEditingShortcut(null);
-                                    setShortcutValue("");
-                                    setShortcutError(null);
-                                  }
-                                }}
-                                disabled={!!shortcutError || !shortcutValue}
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  setEditingShortcut(null);
-                                  setShortcutValue("");
-                                  setShortcutError(null);
-                                }}
-                              >
-                                <AlertCircle className="w-4 h-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingShortcut(key);
-                                  setShortcutValue(keyboardShortcuts[key]);
-                                  setShortcutError(null);
-                                }}
-                                className={cn(
-                                  "px-3 py-1.5 text-sm font-mono rounded bg-sidebar-accent/20 border border-sidebar-border hover:bg-sidebar-accent/30 transition-colors",
-                                  keyboardShortcuts[key] !== DEFAULT_KEYBOARD_SHORTCUTS[key] &&
-                                    "border-brand-500/50 bg-brand-500/10 text-brand-400"
-                                )}
-                                data-testid={`shortcut-${key}`}
-                              >
-                                {keyboardShortcuts[key]}
-                              </button>
-                              {keyboardShortcuts[key] !== DEFAULT_KEYBOARD_SHORTCUTS[key] && (
-                                <span className="text-xs text-brand-400">(modified)</span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Information */}
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-blue-400">
-                      About Keyboard Shortcuts
-                    </p>
-                    <p className="text-blue-400/80 text-xs mt-1">
-                      Shortcuts won&apos;t trigger when typing in input fields. Use
-                      single keys (A-Z, 0-9) or special keys like ` (backtick).
-                      Changes take effect immediately.
+                    <p className="text-sm text-muted-foreground">
+                      Click the &quot;View Keyboard Map&quot; button above to customize your keyboard shortcuts.
+                      The visual interface shows all available keys and lets you easily edit shortcuts with
+                      single-modifier restrictions.
                     </p>
                   </div>
+                  <Button
+                    variant="default"
+                    size="lg"
+                    onClick={() => setShowKeyboardMapDialog(true)}
+                    className="gap-2 mt-4"
+                  >
+                    <Keyboard className="w-5 h-5" />
+                    Open Keyboard Map
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2168,6 +1827,44 @@ export function SettingsView() {
           </div>
         </div>
       </div>
+
+      {/* Keyboard Map Dialog */}
+      <Dialog open={showKeyboardMapDialog} onOpenChange={setShowKeyboardMapDialog}>
+        <DialogContent className="bg-popover border-border max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Keyboard className="w-5 h-5 text-brand-500" />
+              Keyboard Shortcut Map
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Visual overview of all keyboard shortcuts. Keys in color are bound to shortcuts.
+              Click on any shortcut below to edit it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            {/* Visual Keyboard Map */}
+            <KeyboardMap />
+
+            {/* Shortcut Reference - Editable */}
+            <div className="border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground mb-4">
+                All Shortcuts Reference (Click to Edit)
+              </h3>
+              <ShortcutReferencePanel editable />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowKeyboardMapDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Project Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
