@@ -22,12 +22,12 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./app
-        run: npm ci
+        # Use npm install instead of npm ci to correctly resolve platform-specific
+        # optional dependencies (e.g., @tailwindcss/oxide, lightningcss binaries)
+        run: npm install
 
       - name: Run build:electron
-        working-directory: ./app
         run: npm run build:electron

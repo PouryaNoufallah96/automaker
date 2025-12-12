@@ -1,5 +1,5 @@
 {
-  "name": "automaker",
+  "name": "@automaker/app",
   "version": "0.1.0",
   "description": "An autonomous AI development studio that helps you build software faster using AI-powered agents",
   "homepage": "https://github.com/AutoMaker-Org/automaker",
@@ -18,6 +18,7 @@
     "dev": "next dev -p 3007",
     "dev:web": "next dev -p 3007",
     "dev:electron": "concurrently \"next dev -p 3007\" \"wait-on http://localhost:3007 && electron .\"",
+    "dev:electron:debug": "concurrently \"next dev -p 3007\" \"wait-on http://localhost:3007 && OPEN_DEVTOOLS=true electron .\"",
     "build": "next build",
     "build:electron": "next build && electron-builder",
     "start": "next start",
@@ -47,6 +48,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "dotenv": "^17.2.3",
+    "geist": "^1.5.1",
     "lucide-react": "^0.556.0",
     "next": "16.0.7",
     "react": "19.2.0",
@@ -76,6 +78,7 @@
   "build": {
     "appId": "com.automaker.app",
     "productName": "Automaker",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
     "directories": {
       "output": "dist"
     },
@@ -143,7 +146,8 @@
       ],
       "category": "Development",
       "icon": "public/logo_larger.png",
-      "maintainer": "webdevcody@gmail.com"
+      "maintainer": "webdevcody@gmail.com",
+      "executableName": "automaker"
     },
     "nsis": {
       "oneClick": false,
