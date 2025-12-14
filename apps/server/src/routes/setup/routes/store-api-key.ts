@@ -4,7 +4,7 @@
 
 import type { Request, Response } from "express";
 import {
-  apiKeys,
+  setApiKey,
   persistApiKeyToEnv,
   getErrorMessage,
   logError,
@@ -28,7 +28,7 @@ export function createStoreApiKeyHandler() {
         return;
       }
 
-      apiKeys[provider] = apiKey;
+      setApiKey(provider, apiKey);
 
       // Also set as environment variable and persist to .env
       // IMPORTANT: OAuth tokens and API keys must be stored separately

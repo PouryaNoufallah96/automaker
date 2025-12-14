@@ -3,14 +3,14 @@
  */
 
 import type { Request, Response } from "express";
-import { validTokens } from "../common.js";
+import { deleteToken } from "../common.js";
 
 export function createLogoutHandler() {
   return (req: Request, res: Response): void => {
     const token = (req.headers["x-terminal-token"] as string) || req.body.token;
 
     if (token) {
-      validTokens.delete(token);
+      deleteToken(token);
     }
 
     res.json({

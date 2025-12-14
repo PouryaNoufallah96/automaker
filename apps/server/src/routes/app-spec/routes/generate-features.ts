@@ -6,7 +6,7 @@ import type { Request, Response } from "express";
 import type { EventEmitter } from "../../../lib/events.js";
 import { createLogger } from "../../../lib/logger.js";
 import {
-  isRunning,
+  getSpecRegenerationStatus,
   setRunningState,
   logAuthStatus,
   logError,
@@ -32,6 +32,7 @@ export function createGenerateFeaturesHandler(events: EventEmitter) {
         return;
       }
 
+      const { isRunning } = getSpecRegenerationStatus();
       if (isRunning) {
         logger.warn("Generation already running, rejecting request");
         res.json({ success: false, error: "Generation already running" });

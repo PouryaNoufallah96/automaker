@@ -7,7 +7,7 @@ import { promisify } from "util";
 import os from "os";
 import path from "path";
 import fs from "fs/promises";
-import { apiKeys } from "./common.js";
+import { getApiKey } from "./common.js";
 
 const execAsync = promisify(exec);
 
@@ -71,8 +71,8 @@ export async function getClaudeStatus() {
     method: "none" as string,
     hasCredentialsFile: false,
     hasToken: false,
-    hasStoredOAuthToken: !!apiKeys.anthropic_oauth_token,
-    hasStoredApiKey: !!apiKeys.anthropic,
+    hasStoredOAuthToken: !!getApiKey("anthropic_oauth_token"),
+    hasStoredApiKey: !!getApiKey("anthropic"),
     hasEnvApiKey: !!process.env.ANTHROPIC_API_KEY,
     hasEnvOAuthToken: !!process.env.CLAUDE_CODE_OAUTH_TOKEN,
     // Additional fields for detailed status
@@ -159,14 +159,14 @@ export async function getClaudeStatus() {
   }
 
   // In-memory stored OAuth token (from setup wizard - subscription auth)
-  if (!auth.authenticated && apiKeys.anthropic_oauth_token) {
+  if (!auth.authenticated && getApiKey("anthropic_oauth_token")) {
     auth.authenticated = true;
     auth.oauthTokenValid = true;
     auth.method = "oauth_token"; // Stored OAuth token from setup wizard
   }
 
   // In-memory stored API key (from settings UI - pay-per-use)
-  if (!auth.authenticated && apiKeys.anthropic) {
+  if (!auth.authenticated && getApiKey("anthropic")) {
     auth.authenticated = true;
     auth.apiKeyValid = true;
     auth.method = "api_key"; // Manually stored API key

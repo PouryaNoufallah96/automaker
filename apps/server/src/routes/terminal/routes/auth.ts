@@ -7,7 +7,7 @@ import {
   getTerminalEnabledConfigValue,
   getTerminalPasswordConfig,
   generateToken,
-  validTokens,
+  addToken,
   getTokenExpiryMs,
   getErrorMessage,
 } from "../common.js";
@@ -49,7 +49,7 @@ export function createAuthHandler() {
     // Generate session token
     const token = generateToken();
     const now = new Date();
-    validTokens.set(token, {
+    addToken(token, {
       createdAt: now,
       expiresAt: new Date(now.getTime() + getTokenExpiryMs()),
     });

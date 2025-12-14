@@ -4,7 +4,7 @@
 
 import type { Request, Response } from "express";
 import {
-  currentAbortController,
+  getSuggestionsStatus,
   setRunningState,
   getErrorMessage,
   logError,
@@ -13,6 +13,7 @@ import {
 export function createStopHandler() {
   return async (_req: Request, res: Response): Promise<void> => {
     try {
+      const { currentAbortController } = getSuggestionsStatus();
       if (currentAbortController) {
         currentAbortController.abort();
       }

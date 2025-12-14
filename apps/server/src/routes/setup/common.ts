@@ -12,8 +12,29 @@ import {
 
 const logger = createLogger("Setup");
 
-// Storage for API keys (in-memory cache)
-export const apiKeys: Record<string, string> = {};
+// Storage for API keys (in-memory cache) - private
+const apiKeys: Record<string, string> = {};
+
+/**
+ * Get an API key for a provider
+ */
+export function getApiKey(provider: string): string | undefined {
+  return apiKeys[provider];
+}
+
+/**
+ * Set an API key for a provider
+ */
+export function setApiKey(provider: string, key: string): void {
+  apiKeys[provider] = key;
+}
+
+/**
+ * Get all API keys (for read-only access)
+ */
+export function getAllApiKeys(): Record<string, string> {
+  return { ...apiKeys };
+}
 
 /**
  * Helper to persist API keys to .env file

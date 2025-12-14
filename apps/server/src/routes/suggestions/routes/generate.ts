@@ -6,7 +6,7 @@ import type { Request, Response } from "express";
 import type { EventEmitter } from "../../../lib/events.js";
 import { createLogger } from "../../../lib/logger.js";
 import {
-  isRunning,
+  getSuggestionsStatus,
   setRunningState,
   getErrorMessage,
   logError,
@@ -28,6 +28,7 @@ export function createGenerateHandler(events: EventEmitter) {
         return;
       }
 
+      const { isRunning } = getSuggestionsStatus();
       if (isRunning) {
         res.json({
           success: false,

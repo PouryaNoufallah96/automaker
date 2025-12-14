@@ -17,10 +17,36 @@ function getTerminalEnabledConfig(): boolean {
   return process.env.TERMINAL_ENABLED !== "false"; // Enabled by default
 }
 
-// In-memory session tokens (would use Redis in production)
-export const validTokens: Map<string, { createdAt: Date; expiresAt: Date }> =
+// In-memory session tokens (would use Redis in production) - private
+const validTokens: Map<string, { createdAt: Date; expiresAt: Date }> =
   new Map();
 const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Add a token to the valid tokens map
+ */
+export function addToken(
+  token: string,
+  data: { createdAt: Date; expiresAt: Date }
+): void {
+  validTokens.set(token, data);
+}
+
+/**
+ * Delete a token from the valid tokens map
+ */
+export function deleteToken(token: string): void {
+  validTokens.delete(token);
+}
+
+/**
+ * Get token data for a given token
+ */
+export function getTokenData(
+  token: string
+): { createdAt: Date; expiresAt: Date } | undefined {
+  return validTokens.get(token);
+}
 
 /**
  * Generate a secure random token

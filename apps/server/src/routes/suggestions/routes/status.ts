@@ -3,11 +3,16 @@
  */
 
 import type { Request, Response } from "express";
-import { isRunning, getErrorMessage, logError } from "../common.js";
+import {
+  getSuggestionsStatus,
+  getErrorMessage,
+  logError,
+} from "../common.js";
 
 export function createStatusHandler() {
   return async (_req: Request, res: Response): Promise<void> => {
     try {
+      const { isRunning } = getSuggestionsStatus();
       res.json({ success: true, isRunning });
     } catch (error) {
       logError(error, "Get status failed");

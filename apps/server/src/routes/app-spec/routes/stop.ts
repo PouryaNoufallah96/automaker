@@ -4,7 +4,7 @@
 
 import type { Request, Response } from "express";
 import {
-  currentAbortController,
+  getSpecRegenerationStatus,
   setRunningState,
   getErrorMessage,
 } from "../common.js";
@@ -12,6 +12,7 @@ import {
 export function createStopHandler() {
   return async (_req: Request, res: Response): Promise<void> => {
     try {
+      const { currentAbortController } = getSpecRegenerationStatus();
       if (currentAbortController) {
         currentAbortController.abort();
       }

@@ -10,9 +10,19 @@ import {
 
 const logger = createLogger("Suggestions");
 
-// Shared state for tracking generation status
-export let isRunning = false;
-export let currentAbortController: AbortController | null = null;
+// Shared state for tracking generation status - private
+let isRunning = false;
+let currentAbortController: AbortController | null = null;
+
+/**
+ * Get the current running state
+ */
+export function getSuggestionsStatus(): {
+  isRunning: boolean;
+  currentAbortController: AbortController | null;
+} {
+  return { isRunning, currentAbortController };
+}
 
 /**
  * Set the running state and abort controller
