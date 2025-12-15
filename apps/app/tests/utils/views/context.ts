@@ -144,9 +144,6 @@ export async function selectContextFile(
   const fileButton = await getByTestId(page, `context-file-${filename}`);
   await fileButton.waitFor({ state: "visible", timeout });
 
-  // Small delay to ensure React has finished rendering the file list
-  await page.waitForTimeout(200);
-
   // Use JavaScript click to ensure React onClick handler fires
   await fileButton.evaluate((el) => (el as HTMLButtonElement).click());
 

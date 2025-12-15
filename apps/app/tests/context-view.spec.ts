@@ -76,9 +76,7 @@ test.describe("Context View - File Management", () => {
     await waitForContextFile(page, "test-context.md", 10000);
 
     // Verify file appears in list
-    const fileButton = page.locator(
-      '[data-testid="context-file-test-context.md"]'
-    );
+    const fileButton = await getByTestId(page, "context-file-test-context.md");
     await expect(fileButton).toBeVisible();
 
     // Click on the file and wait for it to be selected
@@ -96,9 +94,7 @@ test.describe("Context View - File Management", () => {
     });
 
     // Verify content in editor
-    const editorContent = await page
-      .locator('[data-testid="context-editor"]')
-      .inputValue();
+    const editorContent = await getContextEditorContent(page);
     expect(editorContent).toBe(testContent);
   });
 
@@ -234,7 +230,8 @@ test.describe("Context View - File Management", () => {
     );
 
     // Wait for image preview to appear (indicates upload success)
-    await page.waitForTimeout(500);
+    const addDialog = await getByTestId(page, "add-context-dialog");
+    await addDialog.locator("img").waitFor({ state: "visible" });
 
     // Click confirm
     await clickElement(page, "confirm-add-file");
@@ -256,7 +253,8 @@ test.describe("Context View - File Management", () => {
     await page.waitForSelector('[data-testid="image-preview"]', {
       timeout: 5000,
     });
-    await expect(page.locator('[data-testid="image-preview"]')).toBeVisible();
+    const imagePreview = await getByTestId(page, "image-preview");
+    await expect(imagePreview).toBeVisible();
   });
 
   test("should remove an image context file", async ({ page }) => {
@@ -313,63 +311,41 @@ test.describe("Context View - File Management", () => {
     await navigateToContext(page);
 
     // Click on the markdown file
-    const fileButton = page.locator(
-      '[data-testid="context-file-preview-test.md"]'
-    );
+    const fileButton = await getByTestId(page, "context-file-preview-test.md");
     await fileButton.waitFor({ state: "visible", timeout: 5000 });
     await fileButton.click();
 
-    // Wait for editor to appear (default mode for md files is preview based on component code)
-    await page.waitForTimeout(500);
+    // Wait for content to load (markdown files open in preview mode by default)
+    await waitForFileContentToLoad(page);
 
     // Check if preview button is visible (indicates it's a markdown file)
     const previewToggle = await getByTestId(page, "toggle-preview-mode");
     await expect(previewToggle).toBeVisible();
 
-    // Check current mode - if we see markdown-preview, we're in preview mode
+    // Markdown files always open in preview mode by default (see context-view.tsx:163)
+    // Verify we're in preview mode
     const markdownPreview = await getByTestId(page, "markdown-preview");
-    const isInPreviewMode = await markdownPreview.isVisible().catch(() => false);
+    await expect(markdownPreview).toBeVisible();
 
-    if (isInPreviewMode) {
-      // Click to switch to edit mode
-      await previewToggle.click();
-      await page.waitForSelector('[data-testid="context-editor"]', {
-        timeout: 5000,
-      });
+    // Click to switch to edit mode
+    await previewToggle.click();
+    await page.waitForSelector('[data-testid="context-editor"]', {
+      timeout: 5000,
+    });
 
-      // Verify editor is shown
-      const editor = await getByTestId(page, "context-editor");
-      await expect(editor).toBeVisible();
-      await expect(markdownPreview).not.toBeVisible();
+    // Verify editor is shown
+    const editor = await getByTestId(page, "context-editor");
+    await expect(editor).toBeVisible();
+    await expect(markdownPreview).not.toBeVisible();
 
-      // Click to switch back to preview mode
-      await previewToggle.click();
-      await page.waitForSelector('[data-testid="markdown-preview"]', {
-        timeout: 5000,
-      });
+    // Click to switch back to preview mode
+    await previewToggle.click();
+    await page.waitForSelector('[data-testid="markdown-preview"]', {
+      timeout: 5000,
+    });
 
-      // Verify preview is shown
-      await expect(markdownPreview).toBeVisible();
-    } else {
-      // We're in edit mode, click to switch to preview
-      await previewToggle.click();
-      await page.waitForSelector('[data-testid="markdown-preview"]', {
-        timeout: 5000,
-      });
-
-      // Verify preview is shown
-      await expect(markdownPreview).toBeVisible();
-
-      // Click to switch back to edit mode
-      await previewToggle.click();
-      await page.waitForSelector('[data-testid="context-editor"]', {
-        timeout: 5000,
-      });
-
-      // Verify editor is shown
-      const editor = await getByTestId(page, "context-editor");
-      await expect(editor).toBeVisible();
-    }
+    // Verify preview is shown
+    await expect(markdownPreview).toBeVisible();
   });
 });
 
@@ -412,13 +388,13 @@ test.describe("Context View - Drag and Drop", () => {
       droppedContent
     );
 
-    // Wait for content to be populated
-    await page.waitForTimeout(500);
+    // Wait for content to be populated in textarea
+    const textarea = await getByTestId(page, "new-file-content");
+    await textarea.waitFor({ state: "visible" });
+    await expect(textarea).toHaveValue(droppedContent);
 
     // Verify content is populated in textarea
-    const textareaContent = await page
-      .locator('[data-testid="new-file-content"]')
-      .inputValue();
+    const textareaContent = await textarea.inputValue();
     expect(textareaContent).toBe(droppedContent);
 
     // Verify filename is auto-filled
@@ -535,7 +511,7 @@ test.describe("Context View - Edge Cases", () => {
     await originalFile.click();
 
     // Wait for content to load
-    await page.waitForTimeout(500);
+    await waitForFileContentToLoad(page);
 
     // Switch to edit mode (markdown files open in preview mode)
     await switchToEditMode(page);
@@ -599,7 +575,7 @@ test.describe("Context View - Edge Cases", () => {
     await fileWithHyphens.click();
 
     // Wait for content to load
-    await page.waitForTimeout(500);
+    await waitForFileContentToLoad(page);
 
     // Switch to edit mode (markdown files open in preview mode)
     await switchToEditMode(page);
@@ -643,7 +619,7 @@ test.describe("Context View - Edge Cases", () => {
     await emptyFile.click();
 
     // Wait for content to load
-    await page.waitForTimeout(500);
+    await waitForFileContentToLoad(page);
 
     // Switch to edit mode (markdown files open in preview mode)
     await switchToEditMode(page);
@@ -706,9 +682,7 @@ test.describe("Context View - Edge Cases", () => {
       timeout: 5000,
     });
 
-    const persistedContent = await page
-      .locator('[data-testid="context-editor"]')
-      .inputValue();
+    const persistedContent = await getContextEditorContent(page);
     expect(persistedContent).toBe(testContent);
   });
 });
