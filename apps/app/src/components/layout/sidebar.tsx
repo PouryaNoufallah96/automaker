@@ -1226,14 +1226,13 @@ export function Sidebar() {
             "border-b border-border/40",
             // Background gradient for depth
             "bg-gradient-to-b from-transparent to-background/5",
-            sidebarOpen
-              ? "pt-8 px-3 lg:px-5 flex items-center justify-between"
-              : "pt-2 pb-2 px-3 flex flex-col items-center justify-center gap-2"
+            "flex items-center",
+            sidebarOpen ? "px-3 lg:px-5 justify-start" : "px-3 justify-center"
           )}
         >
           <div
             className={cn(
-              "flex items-center titlebar-no-drag cursor-pointer group",
+              "flex items-center gap-3 titlebar-no-drag cursor-pointer group",
               !sidebarOpen && "flex-col gap-1"
             )}
             onClick={() => setCurrentView("welcome")}
@@ -1242,27 +1241,27 @@ export function Sidebar() {
             {!sidebarOpen ? (
               <div className="relative flex items-center justify-center rounded-lg">
                 <img
-                  src="/logo.png"
+                  src="/automaker.svg"
                   alt="Automaker Logo"
                   className="size-8 group-hover:rotate-12 transition-transform duration-300 ease-out"
                 />
               </div>
             ) : (
-              <span
+              <div
                 className={cn(
-                  "flex items-center font-bold text-foreground text-base tracking-tight",
+                  "flex items-center gap-1",
                   "hidden lg:flex"
                 )}
               >
                 <img
-                  src="/logo.png"
-                  alt="A"
-                  className="h-[1.8em] w-auto inline-block align-middle group-hover:rotate-12 transition-transform duration-300 ease-out"
+                  src="/automaker.svg"
+                  alt="automaker"
+                  className="h-[36.8px] w-[36.8px] group-hover:rotate-12 transition-transform duration-300 ease-out"
                 />
-                <span className="-ml-0.5">
-                  uto<span className="text-brand-500">maker</span>
+                <span className="font-bold text-white text-[1.7rem] tracking-tight leading-none translate-y-[-2px]">
+                  automaker<span className="text-brand-500">.</span>
                 </span>
-              </span>
+              </div>
             )}
           </div>
           {/* Bug Report Button */}
@@ -1274,7 +1273,7 @@ export function Sidebar() {
               );
             }}
             className={cn(
-              "titlebar-no-drag p-1.5 rounded-lg",
+              "titlebar-no-drag p-1.5 rounded-lg absolute right-3",
               "text-muted-foreground hover:text-foreground hover:bg-accent/80",
               "transition-all duration-200 ease-out",
               "hover:scale-105 active:scale-95"
