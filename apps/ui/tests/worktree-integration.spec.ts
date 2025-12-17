@@ -830,7 +830,8 @@ test.describe("Worktree Integration Tests", () => {
     const featureFilePath = path.join(featuresDir, featureDir!, "feature.json");
     const featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
     expect(featureData.branchName).toBe(branchName);
-    expect(featureData.worktreePath).toBe(expectedWorktreePath);
+    // Normalize paths for comparison (server returns forward slashes, path.join returns native)
+    expect(path.normalize(featureData.worktreePath)).toBe(path.normalize(expectedWorktreePath));
   });
 
   test("should reset feature branch and worktree when worktree is deleted", async ({
@@ -888,7 +889,8 @@ test.describe("Worktree Integration Tests", () => {
     let featureFilePath = path.join(featuresDir, featureDir!, "feature.json");
     let featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
     expect(featureData.branchName).toBe(branchName);
-    expect(featureData.worktreePath).toBe(worktreePath);
+    // Normalize paths for comparison (server returns forward slashes, path.join returns native)
+    expect(path.normalize(featureData.worktreePath)).toBe(path.normalize(worktreePath));
 
     // Delete the worktree via UI
     // Open the worktree actions menu
@@ -2428,7 +2430,8 @@ test.describe("Worktree Integration Tests", () => {
     // Verify feature was updated with correct branch and worktreePath
     featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
     expect(featureData.branchName).toBe(newBranchName);
-    expect(featureData.worktreePath).toBe(expectedWorktreePath);
+    // Normalize paths for comparison (server returns forward slashes, path.join returns native)
+    expect(path.normalize(featureData.worktreePath)).toBe(path.normalize(expectedWorktreePath));
   });
 
   test("should not create worktree when editing a feature and selecting main branch", async ({
@@ -2586,6 +2589,7 @@ test.describe("Worktree Integration Tests", () => {
     const featureFilePath = path.join(featuresDir, featureDir!, "feature.json");
     const featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
     expect(featureData.branchName).toBe(existingBranch);
-    expect(featureData.worktreePath).toBe(existingWorktreePath);
+    // Normalize paths for comparison (server returns forward slashes, path.join returns native)
+    expect(path.normalize(featureData.worktreePath)).toBe(path.normalize(existingWorktreePath));
   });
 });

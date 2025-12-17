@@ -38,8 +38,9 @@ export function createListBranchesHandler() {
       const currentBranch = currentBranchOutput.trim();
 
       // List all local branches
+      // Use %(refname:short) without quotes - quotes are preserved on Windows
       const { stdout: branchesOutput } = await execAsync(
-        "git branch --format='%(refname:short)'",
+        "git branch --format=%(refname:short)",
         { cwd: worktreePath }
       );
 
@@ -47,11 +48,15 @@ export function createListBranchesHandler() {
         .trim()
         .split("\n")
         .filter((b) => b.trim())
-        .map((name) => ({
-          name: name.trim(),
-          isCurrent: name.trim() === currentBranch,
-          isRemote: false,
-        }));
+        .map((name) => {
+          // Remove any surrounding quotes (Windows git may preserve them)
+          const cleanName = name.trim().replace(/^['"]|['"]$/g, "");
+          return {
+            name: cleanName,
+            isCurrent: cleanName === currentBranch,
+            isRemote: false,
+          };
+        });
 
       // Get ahead/behind count for current branch
       let aheadCount = 0;

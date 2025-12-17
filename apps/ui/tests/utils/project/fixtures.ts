@@ -3,11 +3,11 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Resolve the workspace root - handle both running from apps/app and from root
+ * Resolve the workspace root - handle both running from apps/ui and from root
  */
 export function getWorkspaceRoot(): string {
   const cwd = process.cwd();
-  if (cwd.includes("apps/app")) {
+  if (cwd.includes("apps/ui")) {
     return path.resolve(cwd, "../..");
   }
   return cwd;

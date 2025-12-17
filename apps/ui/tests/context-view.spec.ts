@@ -22,7 +22,7 @@ import {
 } from "./utils";
 
 const WORKSPACE_ROOT = path.resolve(process.cwd(), "../..");
-const TEST_IMAGE_SRC = path.join(WORKSPACE_ROOT, "apps/app/public/logo.png");
+const TEST_IMAGE_SRC = path.join(WORKSPACE_ROOT, "apps/ui/public/logo.png");
 
 // Configure all tests to run serially to prevent interference with shared context directory
 test.describe.configure({ mode: "serial" });

@@ -40,7 +40,7 @@ export interface FeatureData {
  */
 function getWorkspaceRoot(): string {
   const cwd = process.cwd();
-  if (cwd.includes("apps/app")) {
+  if (cwd.includes("apps/ui")) {
     return path.resolve(cwd, "../..");
   }
   return cwd;
@@ -180,7 +180,10 @@ export async function listWorktrees(repoPath: string): Promise<string[]> {
       .slice(1) // Skip main worktree
       .map((block) => {
         const pathLine = block.split("\n").find((line) => line.startsWith("worktree "));
-        return pathLine ? pathLine.replace("worktree ", "") : null;
+        if (!pathLine) return null;
+        // Normalize path separators to OS native (git on Windows returns forward slashes)
+        const worktreePath = pathLine.replace("worktree ", "");
+        return path.normalize(worktreePath);
       })
       .filter(Boolean) as string[];
   } catch {
