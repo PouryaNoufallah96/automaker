@@ -25,6 +25,24 @@ function isBinaryFile(filePath: string): boolean {
 }
 
 /**
+ * Create a synthetic diff for a new file with the given content lines
+ * This helper reduces duplication in diff generation logic
+ */
+function createNewFileDiff(relativePath: string, mode: string, contentLines: string[]): string {
+  const lineCount = contentLines.length;
+  const addedLines = contentLines.map((line) => `+${line}`).join('\n');
+
+  return `diff --git a/${relativePath} b/${relativePath}
+new file mode ${mode}
+index 0000000..0000000
+--- /dev/null
++++ b/${relativePath}
+@@ -0,0 +${lineCount === 1 ? '1' : `1,${lineCount}`} @@
+${addedLines}
+`;
+}
+
+/**
  * Generate a synthetic unified diff for an untracked (new) file
  * This is needed because `git diff HEAD` doesn't include untracked files
  */
@@ -49,26 +67,14 @@ Binary file ${relativePath} added
 
     // Check if it's a directory (can happen with untracked directories from git status)
     if (stats.isDirectory()) {
-      return `diff --git a/${relativePath} b/${relativePath}
-new file mode 040000
-index 0000000..0000000
---- /dev/null
-+++ b/${relativePath}
-@@ -0,0 +1 @@
-+[Directory]
-`;
+      return createNewFileDiff(relativePath, '040000', ['[Directory]']);
     }
 
     if (stats.size > MAX_SYNTHETIC_DIFF_SIZE) {
       const sizeKB = Math.round(stats.size / 1024);
-      return `diff --git a/${relativePath} b/${relativePath}
-new file mode 100644
-index 0000000..0000000
---- /dev/null
-+++ b/${relativePath}
-@@ -0,0 +1 @@
-+[File too large to display: ${sizeKB}KB]
-`;
+      return createNewFileDiff(relativePath, '100644', [
+        `[File too large to display: ${sizeKB}KB]`,
+      ]);
     }
 
     // Read file content
@@ -103,14 +109,7 @@ ${addedLines}`;
     // Log the error for debugging
     logger.error(`Failed to generate synthetic diff for ${fullPath}:`, error);
     // Return a placeholder diff
-    return `diff --git a/${relativePath} b/${relativePath}
-new file mode 100644
-index 0000000..0000000
---- /dev/null
-+++ b/${relativePath}
-@@ -0,0 +1 @@
-+[Unable to read file content]
-`;
+    return createNewFileDiff(relativePath, '100644', ['[Unable to read file content]']);
   }
 }
 
