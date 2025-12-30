@@ -13,6 +13,7 @@ import { Terminal, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
+import { useSetupStore } from '@/store/setup-store';
 import { cn } from '@/lib/utils';
 import type { CursorModelId, CursorModelConfig } from '@automaker/types';
 import { CURSOR_MODEL_MAP } from '@automaker/types';
@@ -33,6 +34,7 @@ export function CursorSettingsTab() {
   // Global settings from store
   const { enabledCursorModels, cursorDefaultModel, setCursorDefaultModel, toggleCursorModel } =
     useAppStore();
+  const { setCursorCliStatus } = useSetupStore();
 
   const [status, setStatus] = useState<CursorStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,11 +50,24 @@ export function CursorSettingsTab() {
       const statusResult = await api.setup.getCursorStatus();
 
       if (statusResult.success) {
-        setStatus({
+        const newStatus = {
           installed: statusResult.installed ?? false,
           version: statusResult.version ?? undefined,
           authenticated: statusResult.auth?.authenticated ?? false,
           method: statusResult.auth?.method,
+        };
+        setStatus(newStatus);
+
+        // Also update the global setup store so other components can access the status
+        setCursorCliStatus({
+          installed: newStatus.installed,
+          version: newStatus.version,
+          auth: newStatus.authenticated
+            ? {
+                authenticated: true,
+                method: newStatus.method || 'unknown',
+              }
+            : undefined,
         });
       }
     } catch (error) {
@@ -61,7 +76,7 @@ export function CursorSettingsTab() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [setCursorCliStatus]);
 
   useEffect(() => {
     loadData();

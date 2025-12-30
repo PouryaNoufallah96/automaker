@@ -7,7 +7,7 @@
 
 import { BaseProvider } from './base-provider.js';
 import type { InstallationStatus, ModelDefinition } from './types.js';
-import { CURSOR_MODEL_MAP, type ModelProvider } from '@automaker/types';
+import { isCursorModel, type ModelProvider } from '@automaker/types';
 
 /**
  * Provider registration entry
@@ -181,14 +181,6 @@ registerProvider('claude', {
 // Register Cursor provider
 registerProvider('cursor', {
   factory: () => new CursorProvider(),
-  canHandleModel: (model: string) => {
-    // Check for explicit cursor prefix
-    if (model.startsWith('cursor-')) {
-      return true;
-    }
-    // Check if it's a known Cursor model ID
-    const modelId = model.replace('cursor-', '');
-    return modelId in CURSOR_MODEL_MAP;
-  },
+  canHandleModel: (model: string) => isCursorModel(model),
   priority: 10, // Higher priority - check Cursor models first
 });

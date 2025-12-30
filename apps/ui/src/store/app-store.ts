@@ -4,7 +4,7 @@ import type { Project, TrashedProject } from '@/lib/electron';
 import type {
   Feature as BaseFeature,
   FeatureImagePath,
-  AgentModel,
+  ModelAlias,
   PlanningMode,
   AIProfile,
   CursorModelId,
@@ -13,8 +13,8 @@ import type {
 } from '@automaker/types';
 import { getAllCursorModelIds, DEFAULT_PHASE_MODELS } from '@automaker/types';
 
-// Re-export ThemeMode for convenience
-export type { ThemeMode };
+// Re-export types for convenience
+export type { ThemeMode, ModelAlias };
 
 export type ViewMode =
   | 'welcome'
@@ -477,10 +477,10 @@ export interface AppState {
   muteDoneSound: boolean; // When true, mute the notification sound when agents complete (default: false)
 
   // Enhancement Model Settings
-  enhancementModel: AgentModel; // Model used for feature enhancement (default: sonnet)
+  enhancementModel: ModelAlias; // Model used for feature enhancement (default: sonnet)
 
   // Validation Model Settings
-  validationModel: AgentModel; // Model used for GitHub issue validation (default: opus)
+  validationModel: ModelAlias; // Model used for GitHub issue validation (default: opus)
 
   // Phase Model Settings - per-phase AI model configuration
   phaseModels: PhaseModelConfig;
@@ -760,13 +760,13 @@ export interface AppActions {
   setMuteDoneSound: (muted: boolean) => void;
 
   // Enhancement Model actions
-  setEnhancementModel: (model: AgentModel) => void;
+  setEnhancementModel: (model: ModelAlias) => void;
 
   // Validation Model actions
-  setValidationModel: (model: AgentModel) => void;
+  setValidationModel: (model: ModelAlias) => void;
 
   // Phase Model actions
-  setPhaseModel: (phase: PhaseModelKey, model: AgentModel | CursorModelId) => void;
+  setPhaseModel: (phase: PhaseModelKey, model: ModelAlias | CursorModelId) => void;
   setPhaseModels: (models: Partial<PhaseModelConfig>) => void;
   resetPhaseModels: () => void;
 

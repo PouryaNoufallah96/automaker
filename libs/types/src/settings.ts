@@ -6,12 +6,12 @@
  * (for file I/O via SettingsService) and the UI (for state management and sync).
  */
 
-import type { AgentModel } from './model.js';
+import type { ModelAlias } from './model.js';
 import type { CursorModelId } from './cursor-models.js';
 import { CURSOR_MODEL_MAP, getAllCursorModelIds } from './cursor-models.js';
 
-// Re-export AgentModel for convenience
-export type { AgentModel };
+// Re-export ModelAlias for convenience
+export type { ModelAlias };
 
 /**
  * ThemeMode - Available color themes for the UI
@@ -82,25 +82,25 @@ export type ModelProvider = 'claude' | 'cursor';
 export interface PhaseModelConfig {
   // Quick tasks - recommend fast/cheap models (Haiku, Cursor auto)
   /** Model for enhancing feature names and descriptions */
-  enhancementModel: AgentModel | CursorModelId;
+  enhancementModel: ModelAlias | CursorModelId;
   /** Model for generating file context descriptions */
-  fileDescriptionModel: AgentModel | CursorModelId;
+  fileDescriptionModel: ModelAlias | CursorModelId;
   /** Model for analyzing and describing context images */
-  imageDescriptionModel: AgentModel | CursorModelId;
+  imageDescriptionModel: ModelAlias | CursorModelId;
 
   // Validation tasks - recommend smart models (Sonnet, Opus)
   /** Model for validating and improving GitHub issues */
-  validationModel: AgentModel | CursorModelId;
+  validationModel: ModelAlias | CursorModelId;
 
   // Generation tasks - recommend powerful models (Opus, Sonnet)
   /** Model for generating full application specifications */
-  specGenerationModel: AgentModel | CursorModelId;
+  specGenerationModel: ModelAlias | CursorModelId;
   /** Model for creating features from specifications */
-  featureGenerationModel: AgentModel | CursorModelId;
+  featureGenerationModel: ModelAlias | CursorModelId;
   /** Model for reorganizing and prioritizing backlog */
-  backlogPlanningModel: AgentModel | CursorModelId;
+  backlogPlanningModel: ModelAlias | CursorModelId;
   /** Model for analyzing project structure */
-  projectAnalysisModel: AgentModel | CursorModelId;
+  projectAnalysisModel: ModelAlias | CursorModelId;
 }
 
 /** Keys of PhaseModelConfig for type-safe access */
@@ -196,7 +196,7 @@ export interface AIProfile {
 
   // Claude-specific settings
   /** Which Claude model to use (opus, sonnet, haiku) - only for Claude provider */
-  model?: AgentModel;
+  model?: ModelAlias;
   /** Extended thinking level for reasoning-based tasks - only for Claude provider */
   thinkingLevel?: ThinkingLevel;
 
@@ -338,9 +338,9 @@ export interface GlobalSettings {
 
   // Legacy AI Model Selection (deprecated - use phaseModels instead)
   /** @deprecated Use phaseModels.enhancementModel instead */
-  enhancementModel: AgentModel;
+  enhancementModel: ModelAlias;
   /** @deprecated Use phaseModels.validationModel instead */
-  validationModel: AgentModel;
+  validationModel: ModelAlias;
 
   // Cursor CLI Settings (global)
   /** Which Cursor models are available in feature modal (empty = all) */

@@ -16,6 +16,7 @@ import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
 import type { IssueDetailPanelProps } from '../types';
 import { isValidationStale } from '../utils';
+import { ModelOverrideTrigger } from '@/components/shared';
 
 export function IssueDetailPanel({
   issue,
@@ -27,6 +28,7 @@ export function IssueDetailPanel({
   onClose,
   onShowRevalidateConfirm,
   formatDate,
+  modelOverride,
 }: IssueDetailPanelProps) {
   const isValidating = validatingIssues.has(issue.number);
   const cached = cachedValidations.get(issue.number);
@@ -83,10 +85,23 @@ export function IssueDetailPanel({
                     <Clock className="h-4 w-4 mr-1 text-yellow-500" />
                     View (stale)
                   </Button>
+                  <ModelOverrideTrigger
+                    currentModel={modelOverride.effectiveModel}
+                    onModelChange={modelOverride.setOverride}
+                    phase="validationModel"
+                    isOverridden={modelOverride.isOverridden}
+                    size="sm"
+                    variant="icon"
+                  />
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => onValidateIssue(issue, { forceRevalidate: true })}
+                    onClick={() =>
+                      onValidateIssue(issue, {
+                        forceRevalidate: true,
+                        model: modelOverride.effectiveModel,
+                      })
+                    }
                   >
                     <Wand2 className="h-4 w-4 mr-1" />
                     Re-validate
@@ -96,10 +111,24 @@ export function IssueDetailPanel({
             }
 
             return (
-              <Button variant="default" size="sm" onClick={() => onValidateIssue(issue)}>
-                <Wand2 className="h-4 w-4 mr-1" />
-                Validate with AI
-              </Button>
+              <>
+                <ModelOverrideTrigger
+                  currentModel={modelOverride.effectiveModel}
+                  onModelChange={modelOverride.setOverride}
+                  phase="validationModel"
+                  isOverridden={modelOverride.isOverridden}
+                  size="sm"
+                  variant="icon"
+                />
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => onValidateIssue(issue, { model: modelOverride.effectiveModel })}
+                >
+                  <Wand2 className="h-4 w-4 mr-1" />
+                  Validate with AI
+                </Button>
+              </>
             );
           })()}
           <Button variant="outline" size="sm" onClick={() => onOpenInGitHub(issue.url)}>

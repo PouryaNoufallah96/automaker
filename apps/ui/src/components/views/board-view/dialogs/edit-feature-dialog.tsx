@@ -32,7 +32,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { modelSupportsThinking } from '@/lib/utils';
 import {
   Feature,
-  AgentModel,
+  ModelAlias,
   ThinkingLevel,
   AIProfile,
   useAppStore,
@@ -47,6 +47,7 @@ import {
   BranchSelector,
   PlanningModeSelector,
 } from '../shared';
+import { ModelOverrideTrigger, useModelOverride } from '@/components/shared';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DependencyTreeDialog } from './dependency-tree-dialog';
+import { isCursorModel, PROVIDER_PREFIXES } from '@automaker/types';
 
 interface EditFeatureDialogProps {
   feature: Feature | null;
@@ -65,7 +67,7 @@ interface EditFeatureDialogProps {
       category: string;
       description: string;
       skipTests: boolean;
-      model: AgentModel;
+      model: ModelAlias;
       thinkingLevel: ThinkingLevel;
       imagePaths: DescriptionImagePath[];
       textFilePaths: DescriptionTextFilePath[];
@@ -117,8 +119,11 @@ export function EditFeatureDialog({
     feature?.requirePlanApproval ?? false
   );
 
-  // Get enhancement model and worktrees setting from store
-  const { enhancementModel, useWorktrees } = useAppStore();
+  // Get worktrees setting from store
+  const { useWorktrees } = useAppStore();
+
+  // Enhancement model override
+  const enhancementOverride = useModelOverride({ phase: 'enhancementModel' });
 
   useEffect(() => {
     setEditingFeature(feature);
@@ -148,7 +153,7 @@ export function EditFeatureDialog({
       return;
     }
 
-    const selectedModel = (editingFeature.model ?? 'opus') as AgentModel;
+    const selectedModel = (editingFeature.model ?? 'opus') as ModelAlias;
     const normalizedThinking: ThinkingLevel = modelSupportsThinking(selectedModel)
       ? (editingFeature.thinkingLevel ?? 'none')
       : 'none';
@@ -187,22 +192,40 @@ export function EditFeatureDialog({
     }
   };
 
-  const handleModelSelect = (model: AgentModel) => {
+  const handleModelSelect = (model: string) => {
     if (!editingFeature) return;
+    // For Cursor models, thinking is handled by the model itself
+    // For Claude models, check if it supports extended thinking
+    const isCursor = isCursorModel(model);
     setEditingFeature({
       ...editingFeature,
-      model,
-      thinkingLevel: modelSupportsThinking(model) ? editingFeature.thinkingLevel : 'none',
+      model: model as ModelAlias,
+      thinkingLevel: isCursor
+        ? 'none'
+        : modelSupportsThinking(model)
+          ? editingFeature.thinkingLevel
+          : 'none',
     });
   };
 
-  const handleProfileSelect = (model: AgentModel, thinkingLevel: ThinkingLevel) => {
+  const handleProfileSelect = (profile: AIProfile) => {
     if (!editingFeature) return;
-    setEditingFeature({
-      ...editingFeature,
-      model,
-      thinkingLevel,
-    });
+    if (profile.provider === 'cursor') {
+      // Cursor profile - set cursor model
+      const cursorModel = `${PROVIDER_PREFIXES.cursor}${profile.cursorModel || 'auto'}`;
+      setEditingFeature({
+        ...editingFeature,
+        model: cursorModel as ModelAlias,
+        thinkingLevel: 'none', // Cursor handles thinking internally
+      });
+    } else {
+      // Claude profile
+      setEditingFeature({
+        ...editingFeature,
+        model: profile.model || 'sonnet',
+        thinkingLevel: profile.thinkingLevel || 'none',
+      });
+    }
   };
 
   const handleEnhanceDescription = async () => {
@@ -214,7 +237,7 @@ export function EditFeatureDialog({
       const result = await api.enhancePrompt?.enhance(
         editingFeature.description,
         enhancementMode,
-        enhancementModel
+        enhancementOverride.effectiveModel
       );
 
       if (result?.success && result.enhancedText) {
@@ -232,7 +255,10 @@ export function EditFeatureDialog({
     }
   };
 
-  const editModelAllowsThinking = modelSupportsThinking(editingFeature?.model);
+  // Cursor models handle thinking internally, so only show thinking selector for Claude models
+  const isCurrentModelCursor = isCursorModel(editingFeature?.model as string);
+  const editModelAllowsThinking =
+    !isCurrentModelCursor && modelSupportsThinking(editingFeature?.model);
 
   if (!editingFeature) {
     return null;
@@ -361,6 +387,15 @@ export function EditFeatureDialog({
                 <Sparkles className="w-4 h-4 mr-2" />
                 Enhance with AI
               </Button>
+
+              <ModelOverrideTrigger
+                currentModel={enhancementOverride.effectiveModel}
+                onModelChange={enhancementOverride.setOverride}
+                phase="enhancementModel"
+                isOverridden={enhancementOverride.isOverridden}
+                size="sm"
+                variant="icon"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-category">Category (optional)</Label>
@@ -437,6 +472,9 @@ export function EditFeatureDialog({
               profiles={aiProfiles}
               selectedModel={editingFeature.model ?? 'opus'}
               selectedThinkingLevel={editingFeature.thinkingLevel ?? 'none'}
+              selectedCursorModel={
+                isCurrentModelCursor ? (editingFeature.model as string) : undefined
+              }
               onSelect={handleProfileSelect}
               testIdPrefix="edit-profile-quick-select"
             />
@@ -450,7 +488,7 @@ export function EditFeatureDialog({
             {(!showProfilesOnly || showEditAdvancedOptions) && (
               <>
                 <ModelSelector
-                  selectedModel={(editingFeature.model ?? 'opus') as AgentModel}
+                  selectedModel={(editingFeature.model ?? 'opus') as ModelAlias}
                   onModelSelect={handleModelSelect}
                   testIdPrefix="edit-model-select"
                 />

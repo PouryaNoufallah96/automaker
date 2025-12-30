@@ -5,7 +5,7 @@
  * and thinking levels used throughout the application UI.
  */
 
-import type { AgentModel, ThinkingLevel, ModelProvider } from './settings.js';
+import type { ModelAlias, ThinkingLevel, ModelProvider } from './settings.js';
 import type { CursorModelId } from './cursor-models.js';
 
 /**
@@ -13,7 +13,7 @@ import type { CursorModelId } from './cursor-models.js';
  */
 export interface ModelOption {
   /** Model identifier (supports both Claude and Cursor models) */
-  id: AgentModel | CursorModelId;
+  id: ModelAlias | CursorModelId;
   /** Display name shown to user */
   label: string;
   /** Descriptive text explaining model capabilities */
@@ -102,7 +102,7 @@ export const THINKING_LEVEL_LABELS: Record<ThinkingLevel, string> = {
  * getModelDisplayName("claude-opus-4-20250514"); // "claude-opus-4-20250514"
  * ```
  */
-export function getModelDisplayName(model: AgentModel | string): string {
+export function getModelDisplayName(model: ModelAlias | string): string {
   const displayNames: Record<string, string> = {
     haiku: 'Claude Haiku',
     sonnet: 'Claude Sonnet',

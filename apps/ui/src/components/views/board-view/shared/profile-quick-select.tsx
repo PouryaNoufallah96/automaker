@@ -1,8 +1,8 @@
 import { Label } from '@/components/ui/label';
 import { Brain, UserCircle, Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AgentModel, ThinkingLevel, AIProfile } from '@automaker/types';
-import { CURSOR_MODEL_MAP, profileHasThinking } from '@automaker/types';
+import type { ModelAlias, ThinkingLevel, AIProfile, CursorModelId } from '@automaker/types';
+import { CURSOR_MODEL_MAP, profileHasThinking, PROVIDER_PREFIXES } from '@automaker/types';
 import { PROFILE_ICONS } from './model-constants';
 
 /**
@@ -32,7 +32,7 @@ function getProfileThinkingDisplay(profile: AIProfile): string | null {
 
 interface ProfileQuickSelectProps {
   profiles: AIProfile[];
-  selectedModel: AgentModel;
+  selectedModel: ModelAlias | CursorModelId;
   selectedThinkingLevel: ThinkingLevel;
   selectedCursorModel?: string; // For detecting cursor profile selection
   onSelect: (profile: AIProfile) => void; // Changed to pass full profile
@@ -62,7 +62,7 @@ export function ProfileQuickSelect({
   const isProfileSelected = (profile: AIProfile): boolean => {
     if (profile.provider === 'cursor') {
       // For cursor profiles, check if cursor model matches
-      const profileCursorModel = `cursor-${profile.cursorModel || 'auto'}`;
+      const profileCursorModel = `${PROVIDER_PREFIXES.cursor}${profile.cursorModel || 'auto'}`;
       return selectedCursorModel === profileCursorModel;
     }
     // For Claude profiles

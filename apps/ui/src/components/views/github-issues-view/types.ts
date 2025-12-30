@@ -1,4 +1,5 @@
 import type { GitHubIssue, StoredValidation } from '@/lib/electron';
+import type { ModelAlias, CursorModelId } from '@automaker/types';
 
 export interface IssueRowProps {
   issue: GitHubIssue;
@@ -18,11 +19,21 @@ export interface IssueDetailPanelProps {
   cachedValidations: Map<number, StoredValidation>;
   onValidateIssue: (
     issue: GitHubIssue,
-    options?: { showDialog?: boolean; forceRevalidate?: boolean }
+    options?: {
+      showDialog?: boolean;
+      forceRevalidate?: boolean;
+      model?: ModelAlias | CursorModelId;
+    }
   ) => Promise<void>;
   onViewCachedValidation: (issue: GitHubIssue) => Promise<void>;
   onOpenInGitHub: (url: string) => void;
   onClose: () => void;
   onShowRevalidateConfirm: () => void;
   formatDate: (date: string) => string;
+  /** Model override state */
+  modelOverride: {
+    effectiveModel: ModelAlias | CursorModelId;
+    isOverridden: boolean;
+    setOverride: (model: ModelAlias | CursorModelId | null) => void;
+  };
 }

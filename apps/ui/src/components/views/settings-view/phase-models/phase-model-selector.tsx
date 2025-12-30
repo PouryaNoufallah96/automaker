@@ -1,13 +1,14 @@
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
-import type { AgentModel, CursorModelId } from '@automaker/types';
+import type { ModelAlias, CursorModelId } from '@automaker/types';
+import { stripProviderPrefix } from '@automaker/types';
 import { CLAUDE_MODELS, CURSOR_MODELS } from '@/components/views/board-view/shared/model-constants';
 
 interface PhaseModelSelectorProps {
   label: string;
   description: string;
-  value: AgentModel | CursorModelId;
-  onChange: (model: AgentModel | CursorModelId) => void;
+  value: ModelAlias | CursorModelId;
+  onChange: (model: ModelAlias | CursorModelId) => void;
 }
 
 export function PhaseModelSelector({
@@ -20,12 +21,9 @@ export function PhaseModelSelector({
 
   // Filter Cursor models to only show enabled ones
   const availableCursorModels = CURSOR_MODELS.filter((model) => {
-    const cursorId = model.id.replace('cursor-', '') as CursorModelId;
+    const cursorId = stripProviderPrefix(model.id) as CursorModelId;
     return enabledCursorModels.includes(cursorId);
   });
-
-  // Check if current value is a Claude model or Cursor model
-  const isClaudeModel = (v: string) => ['haiku', 'sonnet', 'opus'].includes(v);
 
   return (
     <div
@@ -50,7 +48,7 @@ export function PhaseModelSelector({
             return (
               <button
                 key={model.id}
-                onClick={() => onChange(model.id as AgentModel)}
+                onClick={() => onChange(model.id as ModelAlias)}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-xs font-medium',
                   'transition-all duration-150',
@@ -75,7 +73,7 @@ export function PhaseModelSelector({
 
           {/* Cursor Models */}
           {availableCursorModels.map((model) => {
-            const cursorId = model.id.replace('cursor-', '') as CursorModelId;
+            const cursorId = stripProviderPrefix(model.id) as CursorModelId;
             const isActive = value === cursorId;
             return (
               <button

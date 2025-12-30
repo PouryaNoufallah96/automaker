@@ -2,26 +2,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Bot, Terminal, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AgentModel } from '@/store/app-store';
+import type { ModelAlias } from '@/store/app-store';
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
+import { getModelProvider, PROVIDER_PREFIXES, stripProviderPrefix } from '@automaker/types';
 import type { ModelProvider } from '@automaker/types';
 import { CLAUDE_MODELS, CURSOR_MODELS, ModelOption } from './model-constants';
 
 interface ModelSelectorProps {
-  selectedModel: string; // Can be AgentModel or "cursor-{id}"
+  selectedModel: string; // Can be ModelAlias or "cursor-{id}"
   onModelSelect: (model: string) => void;
   testIdPrefix?: string;
-}
-
-/**
- * Get the provider from a model string
- */
-function getProviderFromModelString(model: string): ModelProvider {
-  if (model.startsWith('cursor-')) {
-    return 'cursor';
-  }
-  return 'claude';
 }
 
 export function ModelSelector({
@@ -32,7 +23,7 @@ export function ModelSelector({
   const { enabledCursorModels, cursorDefaultModel } = useAppStore();
   const { cursorCliStatus } = useSetupStore();
 
-  const selectedProvider = getProviderFromModelString(selectedModel);
+  const selectedProvider = getModelProvider(selectedModel);
 
   // Check if Cursor CLI is available
   const isCursorAvailable = cursorCliStatus?.installed && cursorCliStatus?.auth?.authenticated;
@@ -40,14 +31,14 @@ export function ModelSelector({
   // Filter Cursor models based on enabled models from global settings
   const filteredCursorModels = CURSOR_MODELS.filter((model) => {
     // Extract the cursor model ID from the prefixed ID (e.g., "cursor-auto" -> "auto")
-    const cursorModelId = model.id.replace('cursor-', '');
+    const cursorModelId = stripProviderPrefix(model.id);
     return enabledCursorModels.includes(cursorModelId as any);
   });
 
   const handleProviderChange = (provider: ModelProvider) => {
     if (provider === 'cursor' && selectedProvider !== 'cursor') {
       // Switch to Cursor's default model (from global settings)
-      onModelSelect(`cursor-${cursorDefaultModel}`);
+      onModelSelect(`${PROVIDER_PREFIXES.cursor}${cursorDefaultModel}`);
     } else if (provider === 'claude' && selectedProvider !== 'claude') {
       // Switch to Claude's default model
       onModelSelect('sonnet');

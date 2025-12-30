@@ -8,7 +8,14 @@
  * - Handles multiple model sources with priority
  */
 
-import { CLAUDE_MODEL_MAP, CURSOR_MODEL_MAP, DEFAULT_MODELS } from '@automaker/types';
+import {
+  CLAUDE_MODEL_MAP,
+  CURSOR_MODEL_MAP,
+  DEFAULT_MODELS,
+  PROVIDER_PREFIXES,
+  isCursorModel,
+  stripProviderPrefix,
+} from '@automaker/types';
 
 /**
  * Resolve a model key/alias to a full model string
@@ -33,8 +40,8 @@ export function resolveModelString(
 
   // Cursor model with explicit prefix (e.g., "cursor-composer-1") - pass through unchanged
   // CursorProvider will strip the prefix when calling the CLI
-  if (modelKey.startsWith('cursor-')) {
-    const cursorModelId = modelKey.replace('cursor-', '');
+  if (modelKey.startsWith(PROVIDER_PREFIXES.cursor)) {
+    const cursorModelId = stripProviderPrefix(modelKey);
     // Verify it's a valid Cursor model
     if (cursorModelId in CURSOR_MODEL_MAP) {
       console.log(
@@ -50,7 +57,7 @@ export function resolveModelString(
   // Check if it's a bare Cursor model ID (e.g., "composer-1", "auto", "gpt-4o")
   if (modelKey in CURSOR_MODEL_MAP) {
     // Return with cursor- prefix so provider routing works correctly
-    const prefixedModel = `cursor-${modelKey}`;
+    const prefixedModel = `${PROVIDER_PREFIXES.cursor}${modelKey}`;
     console.log(
       `[ModelResolver] Detected bare Cursor model ID: "${modelKey}" -> "${prefixedModel}"`
     );

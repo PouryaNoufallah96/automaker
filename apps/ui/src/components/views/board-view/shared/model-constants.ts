@@ -1,10 +1,10 @@
-import type { AgentModel, ThinkingLevel } from '@/store/app-store';
+import type { ModelAlias, ThinkingLevel } from '@/store/app-store';
 import type { ModelProvider } from '@automaker/types';
 import { CURSOR_MODEL_MAP } from '@automaker/types';
 import { Brain, Zap, Scale, Cpu, Rocket, Sparkles } from 'lucide-react';
 
 export type ModelOption = {
-  id: string; // Claude models use AgentModel, Cursor models use "cursor-{id}"
+  id: string; // Claude models use ModelAlias, Cursor models use "cursor-{id}"
   label: string;
   description: string;
   badge?: string;

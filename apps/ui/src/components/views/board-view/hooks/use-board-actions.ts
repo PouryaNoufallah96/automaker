@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import {
   Feature,
   FeatureImage,
-  AgentModel,
+  ModelAlias,
   ThinkingLevel,
   PlanningMode,
   useAppStore,
@@ -92,7 +92,7 @@ export function useBoardActions({
       images: FeatureImage[];
       imagePaths: DescriptionImagePath[];
       skipTests: boolean;
-      model: AgentModel;
+      model: ModelAlias;
       thinkingLevel: ThinkingLevel;
       branchName: string;
       priority: number;
@@ -210,7 +210,7 @@ export function useBoardActions({
         category: string;
         description: string;
         skipTests: boolean;
-        model: AgentModel;
+        model: ModelAlias;
         thinkingLevel: ThinkingLevel;
         imagePaths: DescriptionImagePath[];
         branchName: string;

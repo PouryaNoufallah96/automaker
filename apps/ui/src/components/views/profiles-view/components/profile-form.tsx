@@ -11,7 +11,7 @@ import { Brain, Bot, Terminal } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
   AIProfile,
-  AgentModel,
+  ModelAlias,
   ThinkingLevel,
   ModelProvider,
   CursorModelId,
@@ -42,7 +42,7 @@ export function ProfileForm({
     description: profile.description || '',
     provider: (profile.provider || 'claude') as ModelProvider,
     // Claude-specific
-    model: profile.model || ('sonnet' as AgentModel),
+    model: profile.model || ('sonnet' as ModelAlias),
     thinkingLevel: profile.thinkingLevel || ('none' as ThinkingLevel),
     // Cursor-specific
     cursorModel: profile.cursorModel || ('auto' as CursorModelId),
@@ -62,7 +62,7 @@ export function ProfileForm({
     });
   };
 
-  const handleModelChange = (model: AgentModel) => {
+  const handleModelChange = (model: ModelAlias) => {
     setFormData({
       ...formData,
       model,

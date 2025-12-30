@@ -205,8 +205,8 @@ export function useIssueValidation({
   }, []);
 
   const handleValidateIssue = useCallback(
-    async (issue: GitHubIssue, options: { forceRevalidate?: boolean } = {}) => {
-      const { forceRevalidate = false } = options;
+    async (issue: GitHubIssue, options: { forceRevalidate?: boolean; model?: string } = {}) => {
+      const { forceRevalidate = false, model } = options;
 
       if (!currentProject?.path) {
         toast.error('No project selected');
@@ -233,6 +233,9 @@ export function useIssueValidation({
         description: 'You will be notified when the analysis is complete',
       });
 
+      // Use provided model override or fall back to global validationModel
+      const modelToUse = model || validationModel;
+
       try {
         const api = getElectronAPI();
         if (api.github?.validateIssue) {
@@ -244,7 +247,7 @@ export function useIssueValidation({
               issueBody: issue.body || '',
               issueLabels: issue.labels.map((l) => l.name),
             },
-            validationModel
+            modelToUse
           );
 
           if (!result.success) {

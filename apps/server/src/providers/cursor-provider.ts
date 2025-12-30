@@ -28,6 +28,7 @@ import type {
   ModelDefinition,
   ContentBlock,
 } from './types.js';
+import { stripProviderPrefix } from '@automaker/types';
 import {
   type CursorStreamEvent,
   type CursorSystemEvent,
@@ -115,10 +116,7 @@ export class CursorProvider extends CliProvider {
 
   buildCliArgs(options: ExecuteOptions): string[] {
     // Extract model (strip 'cursor-' prefix if present)
-    let model = options.model || 'auto';
-    if (model.startsWith('cursor-')) {
-      model = model.substring(7);
-    }
+    const model = stripProviderPrefix(options.model || 'auto');
 
     // Build prompt content
     let promptText: string;

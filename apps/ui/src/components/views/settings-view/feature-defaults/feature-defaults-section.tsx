@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { AIProfile } from '@/store/app-store';
-import type { AgentModel } from '@automaker/types';
+import type { ModelAlias } from '@automaker/types';
 
 type PlanningMode = 'skip' | 'lite' | 'spec' | 'full';
 
@@ -36,7 +36,7 @@ interface FeatureDefaultsSectionProps {
   defaultRequirePlanApproval: boolean;
   defaultAIProfileId: string | null;
   aiProfiles: AIProfile[];
-  validationModel: AgentModel;
+  validationModel: ModelAlias;
   onShowProfilesOnlyChange: (value: boolean) => void;
   onDefaultSkipTestsChange: (value: boolean) => void;
   onEnableDependencyBlockingChange: (value: boolean) => void;
@@ -44,7 +44,7 @@ interface FeatureDefaultsSectionProps {
   onDefaultPlanningModeChange: (value: PlanningMode) => void;
   onDefaultRequirePlanApprovalChange: (value: boolean) => void;
   onDefaultAIProfileIdChange: (value: string | null) => void;
-  onValidationModelChange: (value: AgentModel) => void;
+  onValidationModelChange: (value: ModelAlias) => void;
 }
 
 export function FeatureDefaultsSection({
@@ -243,7 +243,7 @@ export function FeatureDefaultsSection({
               <Label className="text-foreground font-medium">Issue Validation Model</Label>
               <Select
                 value={validationModel}
-                onValueChange={(v: string) => onValidationModelChange(v as AgentModel)}
+                onValueChange={(v: string) => onValidationModelChange(v as ModelAlias)}
               >
                 <SelectTrigger className="w-[140px] h-8" data-testid="validation-model-select">
                   <SelectValue />

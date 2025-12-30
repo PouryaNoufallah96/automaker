@@ -1,8 +1,8 @@
-import type { AgentModel, ModelProvider, AIProfile } from '@automaker/types';
+import type { ModelAlias, ModelProvider, AIProfile } from '@automaker/types';
 import { CURSOR_MODEL_MAP } from '@automaker/types';
 
 // Helper to determine provider from model (legacy, always returns 'claude')
-export function getProviderFromModel(model: AgentModel): ModelProvider {
+export function getProviderFromModel(model: ModelAlias): ModelProvider {
   return 'claude';
 }
 

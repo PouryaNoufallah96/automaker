@@ -11,6 +11,7 @@ import { useGithubIssues, useIssueValidation } from './github-issues-view/hooks'
 import { IssueRow, IssueDetailPanel, IssuesListHeader } from './github-issues-view/components';
 import { ValidationDialog } from './github-issues-view/dialogs';
 import { formatDate, getFeaturePriority } from './github-issues-view/utils';
+import { useModelOverride } from '@/components/shared';
 
 export function GitHubIssuesView() {
   const [selectedIssue, setSelectedIssue] = useState<GitHubIssue | null>(null);
@@ -20,6 +21,9 @@ export function GitHubIssuesView() {
 
   const { currentProject, defaultAIProfileId, aiProfiles, getCurrentWorktree, worktreesByProject } =
     useAppStore();
+
+  // Model override for validation
+  const validationModelOverride = useModelOverride({ phase: 'validationModel' });
 
   const { openIssues, closedIssues, loading, refreshing, error, refresh } = useGithubIssues();
 
@@ -85,6 +89,9 @@ export function GitHubIssuesView() {
             .filter(Boolean)
             .join('\n');
 
+          // Use profile default model
+          const featureModel = defaultProfile?.model ?? 'opus';
+
           const feature = {
             id: `issue-${issue.number}-${crypto.randomUUID()}`,
             title: issue.title,
@@ -93,7 +100,7 @@ export function GitHubIssuesView() {
             status: 'backlog' as const,
             passes: false,
             priority: getFeaturePriority(validation.estimatedComplexity),
-            model: defaultProfile?.model ?? 'opus',
+            model: featureModel,
             thinkingLevel: defaultProfile?.thinkingLevel ?? 'none',
             branchName: currentBranch,
             createdAt: new Date().toISOString(),
@@ -205,6 +212,7 @@ export function GitHubIssuesView() {
           onClose={() => setSelectedIssue(null)}
           onShowRevalidateConfirm={() => setShowRevalidateConfirm(true)}
           formatDate={formatDate}
+          modelOverride={validationModelOverride}
         />
       )}
 
@@ -228,7 +236,10 @@ export function GitHubIssuesView() {
         confirmText="Re-validate"
         onConfirm={() => {
           if (selectedIssue) {
-            handleValidateIssue(selectedIssue, { forceRevalidate: true });
+            handleValidateIssue(selectedIssue, {
+              forceRevalidate: true,
+              model: validationModelOverride.effectiveModel,
+            });
           }
         }}
       />

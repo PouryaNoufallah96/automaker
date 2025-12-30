@@ -17,8 +17,7 @@ Allow users to configure which AI provider/model to use for each distinct phase 
 These fields already exist in `GlobalSettings` but are not wired up:
 
 ```typescript
-// libs/types/src/settings.ts - Line ~50
-enhancementModel: AgentModel; // Currently ignored, hardcoded to 'sonnet'
+// libs/types/src/settenhancementModel: AgentModel; // Currently ignored, hardcoded to 'sonnet'
 validationModel: AgentModel; // Currently ignored, hardcoded to 'opus'
 ```
 
@@ -27,8 +26,8 @@ validationModel: AgentModel; // Currently ignored, hardcoded to 'opus'
 | Phase               | Location                         | Current Model      | Priority |
 | ------------------- | -------------------------------- | ------------------ | -------- |
 | Feature Execution   | `auto-mode-service.ts`           | Per-feature        | ✅ Done  |
-| Enhancement         | `enhance.ts`                     | Hardcoded `sonnet` | P1       |
-| GitHub Validation   | `validate-issue.ts`              | Hardcoded `opus`   | P1       |
+| Enhancement         | `enhance.ts`                     | Hardcoded `sonnet` | ✅ Done  |
+| GitHub Validation   | `validate-issue.ts`              | Hardcoded `opus`   | ✅ Done  |
 | File Description    | `describe-file.ts`               | Hardcoded `haiku`  | P2       |
 | Image Description   | `describe-image.ts`              | Hardcoded `haiku`  | P2       |
 | App Spec Generation | `generate-spec.ts`               | SDK default        | P2       |
@@ -372,8 +371,8 @@ Phase 8: Quick Model Override Component  <- Right after UI for easier testing
 Phase 9: Integration Points for Override  <- Wire override to each feature
 
 Then wire routes (testing both global + override together):
-Phase 3: Enhancement Route
-Phase 4: Validation Route
+Phase 3: Enhancement Route - Done
+Phase 4: Validation Route - Broken validation parsing ! need urgent fix to properly validate cursor cli output
 Phase 5: Context Routes (file/image description)
 Phase 6: Generation Routes (spec, features)
 Phase 7: Remaining Routes (backlog, analysis)
@@ -650,6 +649,34 @@ Replace current model selector with ModelOverrideTrigger:
 
 - Shows inherited model from AI Profile
 - Allows quick override for this feature
+- Clear override returns to profile default
+
+### 9.2 Kanban Card
+
+**File**: `apps/ui/src/components/views/board-view/components/kanban-card/kanban-card.tsx`
+
+Add small gear icon next to "Implement" button:
+
+- Quick model change before running
+- Doesn't persist to feature (one-time override)
+
+### 9.3 Enhancement Dialog
+
+**File**: `apps/ui/src/components/views/board-view/components/enhance-dialog.tsx`
+
+Add override trigger in header:
+
+- Default from global settings
+- Override for this enhancement only
+
+### 9.4 GitHub Import
+
+**File**: `apps/ui/src/components/views/github-view/`
+
+Add override for validation model:
+
+for this feature
+
 - Clear override returns to profile default
 
 ### 9.2 Kanban Card

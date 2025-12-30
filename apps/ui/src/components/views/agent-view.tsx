@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useAppStore, type AgentModel } from '@/store/app-store';
+import { useAppStore, type ModelAlias } from '@/store/app-store';
+import type { CursorModelId } from '@automaker/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ImageDropZone } from '@/components/ui/image-drop-zone';
@@ -63,7 +64,7 @@ export function AgentView() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showSessionManager, setShowSessionManager] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<AgentModel>('sonnet');
+  const [selectedModel, setSelectedModel] = useState<ModelAlias | CursorModelId>('sonnet');
 
   // Track if initial session has been loaded
   const initialSessionLoadedRef = useRef(false);

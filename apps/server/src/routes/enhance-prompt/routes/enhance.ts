@@ -1,7 +1,7 @@
 /**
  * POST /enhance-prompt endpoint - Enhance user input text
  *
- * Uses Claude AI to enhance text based on the specified enhancement mode.
+ * Uses Claude AI or Cursor to enhance text based on the specified enhancement mode.
  * Supports modes: improve, technical, simplify, acceptance
  */
 
@@ -9,7 +9,8 @@ import type { Request, Response } from 'express';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { createLogger } from '@automaker/utils';
 import { resolveModelString } from '@automaker/model-resolver';
-import { CLAUDE_MODEL_MAP } from '@automaker/types';
+import { CLAUDE_MODEL_MAP, isCursorModel } from '@automaker/types';
+import { ProviderFactory } from '../../../providers/provider-factory.js';
 import {
   getSystemPrompt,
   buildUserPrompt,
@@ -81,6 +82,40 @@ async function extractTextFromStream(
 }
 
 /**
+ * Execute enhancement using Cursor provider
+ *
+ * @param prompt - The enhancement prompt
+ * @param model - The Cursor model to use
+ * @returns The enhanced text
+ */
+async function executeWithCursor(prompt: string, model: string): Promise<string> {
+  const provider = ProviderFactory.getProviderForModel(model);
+
+  let responseText = '';
+
+  for await (const msg of provider.executeQuery({
+    prompt,
+    model,
+    cwd: process.cwd(), // Enhancement doesn't need a specific working directory
+  })) {
+    if (msg.type === 'assistant' && msg.message?.content) {
+      for (const block of msg.message.content) {
+        if (block.type === 'text' && block.text) {
+          responseText += block.text;
+        }
+      }
+    } else if (msg.type === 'result' && msg.subtype === 'success' && msg.result) {
+      // Use result if it's a final accumulated message
+      if (msg.result.length > responseText.length) {
+        responseText = msg.result;
+      }
+    }
+  }
+
+  return responseText;
+}
+
+/**
  * Create the enhance request handler
  *
  * @returns Express request handler for text enhancement
@@ -140,24 +175,36 @@ export function createEnhanceHandler(): (req: Request, res: Response) => Promise
 
       logger.debug(`Using model: ${resolvedModel}`);
 
-      // Call Claude SDK with minimal configuration for text transformation
-      // Key: no tools, just text completion
-      const stream = query({
-        prompt: userPrompt,
-        options: {
-          model: resolvedModel,
-          systemPrompt,
-          maxTurns: 1,
-          allowedTools: [],
-          permissionMode: 'acceptEdits',
-        },
-      });
+      let enhancedText: string;
 
-      // Extract the enhanced text from the response
-      const enhancedText = await extractTextFromStream(stream);
+      // Route to appropriate provider based on model
+      if (isCursorModel(resolvedModel)) {
+        // Use Cursor provider for Cursor models
+        logger.info(`Using Cursor provider for model: ${resolvedModel}`);
+
+        // Cursor doesn't have a separate system prompt concept, so combine them
+        const combinedPrompt = `${systemPrompt}\n\n${userPrompt}`;
+        enhancedText = await executeWithCursor(combinedPrompt, resolvedModel);
+      } else {
+        // Use Claude SDK for Claude models
+        logger.info(`Using Claude provider for model: ${resolvedModel}`);
+
+        const stream = query({
+          prompt: userPrompt,
+          options: {
+            model: resolvedModel,
+            systemPrompt,
+            maxTurns: 1,
+            allowedTools: [],
+            permissionMode: 'acceptEdits',
+          },
+        });
+
+        enhancedText = await extractTextFromStream(stream);
+      }
 
       if (!enhancedText || enhancedText.trim().length === 0) {
-        logger.warn('Received empty response from Claude');
+        logger.warn('Received empty response from AI');
         const response: EnhanceErrorResponse = {
           success: false,
           error: 'Failed to generate enhanced text - empty response',

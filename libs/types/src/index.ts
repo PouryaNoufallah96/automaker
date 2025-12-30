@@ -33,7 +33,7 @@ export type { ErrorType, ErrorInfo } from './error.js';
 export type { ImageData, ImageContentBlock } from './image.js';
 
 // Model types and constants
-export { CLAUDE_MODEL_MAP, DEFAULT_MODELS, type ModelAlias, type AgentModel } from './model.js';
+export { CLAUDE_MODEL_MAP, DEFAULT_MODELS, type ModelAlias } from './model.js';
 
 // Event types
 export type { EventType, EventCallback } from './event.js';
@@ -114,3 +114,15 @@ export type {
 // Cursor types
 export * from './cursor-models.js';
 export * from './cursor-cli.js';
+
+// Provider utilities
+export {
+  PROVIDER_PREFIXES,
+  isCursorModel,
+  isClaudeModel,
+  getModelProvider,
+  stripProviderPrefix,
+  addProviderPrefix,
+  getBareModelId,
+  normalizeModelString,
+} from './provider-utils.js';

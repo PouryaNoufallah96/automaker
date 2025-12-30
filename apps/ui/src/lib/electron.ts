@@ -10,7 +10,7 @@ import type {
   IssueValidationResponse,
   IssueValidationEvent,
   StoredValidation,
-  AgentModel,
+  ModelAlias,
 } from '@automaker/types';
 import { getJSON, setJSON, removeItem } from './storage';
 
@@ -198,7 +198,7 @@ export interface GitHubAPI {
   validateIssue: (
     projectPath: string,
     issue: IssueValidationInput,
-    model?: AgentModel
+    model?: ModelAlias
   ) => Promise<{ success: boolean; message?: string; issueNumber?: number; error?: string }>;
   /** Check validation status for an issue or all issues */
   getValidationStatus: (
@@ -2734,7 +2734,7 @@ function createMockGitHubAPI(): GitHubAPI {
         mergedPRs: [],
       };
     },
-    validateIssue: async (projectPath: string, issue: IssueValidationInput, model?: AgentModel) => {
+    validateIssue: async (projectPath: string, issue: IssueValidationInput, model?: ModelAlias) => {
       console.log('[Mock] Starting async validation:', { projectPath, issue, model });
 
       // Simulate async validation in background

@@ -1,27 +1,27 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAppStore } from '@/store/app-store';
-import type { AgentModel, CursorModelId, PhaseModelKey } from '@automaker/types';
+import type { ModelAlias, CursorModelId, PhaseModelKey } from '@automaker/types';
 
 export interface UseModelOverrideOptions {
   /** Which phase this override is for */
   phase: PhaseModelKey;
   /** Initial override value (optional) */
-  initialOverride?: AgentModel | CursorModelId | null;
+  initialOverride?: ModelAlias | CursorModelId | null;
 }
 
 export interface UseModelOverrideResult {
   /** The effective model (override or global default) */
-  effectiveModel: AgentModel | CursorModelId;
+  effectiveModel: ModelAlias | CursorModelId;
   /** Whether the model is currently overridden */
   isOverridden: boolean;
   /** Set a model override */
-  setOverride: (model: AgentModel | CursorModelId | null) => void;
+  setOverride: (model: ModelAlias | CursorModelId | null) => void;
   /** Clear the override and use global default */
   clearOverride: () => void;
   /** The global default for this phase */
-  globalDefault: AgentModel | CursorModelId;
+  globalDefault: ModelAlias | CursorModelId;
   /** The current override value (null if not overridden) */
-  override: AgentModel | CursorModelId | null;
+  override: ModelAlias | CursorModelId | null;
 }
 
 /**
@@ -53,7 +53,7 @@ export function useModelOverride({
   initialOverride = null,
 }: UseModelOverrideOptions): UseModelOverrideResult {
   const { phaseModels } = useAppStore();
-  const [override, setOverrideState] = useState<AgentModel | CursorModelId | null>(initialOverride);
+  const [override, setOverrideState] = useState<ModelAlias | CursorModelId | null>(initialOverride);
 
   const globalDefault = phaseModels[phase];
 
@@ -63,7 +63,7 @@ export function useModelOverride({
 
   const isOverridden = override !== null;
 
-  const setOverride = useCallback((model: AgentModel | CursorModelId | null) => {
+  const setOverride = useCallback((model: ModelAlias | CursorModelId | null) => {
     setOverrideState(model);
   }, []);
 

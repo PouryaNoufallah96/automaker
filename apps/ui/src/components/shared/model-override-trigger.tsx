@@ -4,14 +4,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAppStore } from '@/store/app-store';
-import type { AgentModel, CursorModelId, PhaseModelKey } from '@automaker/types';
+import type { ModelAlias, CursorModelId, PhaseModelKey } from '@automaker/types';
+import { PROVIDER_PREFIXES, stripProviderPrefix } from '@automaker/types';
 import { CLAUDE_MODELS, CURSOR_MODELS } from '@/components/views/board-view/shared/model-constants';
 
 export interface ModelOverrideTriggerProps {
   /** Current effective model (from global settings or explicit override) */
-  currentModel: AgentModel | CursorModelId;
+  currentModel: ModelAlias | CursorModelId;
   /** Callback when user selects override */
-  onModelChange: (model: AgentModel | CursorModelId | null) => void;
+  onModelChange: (model: ModelAlias | CursorModelId | null) => void;
   /** Optional: which phase this is for (shows global default) */
   phase?: PhaseModelKey;
   /** Size variants for different contexts */
@@ -24,13 +25,13 @@ export interface ModelOverrideTriggerProps {
   className?: string;
 }
 
-function getModelLabel(modelId: AgentModel | CursorModelId): string {
+function getModelLabel(modelId: ModelAlias | CursorModelId): string {
   // Check Claude models
   const claudeModel = CLAUDE_MODELS.find((m) => m.id === modelId);
   if (claudeModel) return claudeModel.label;
 
   // Check Cursor models (without cursor- prefix)
-  const cursorModel = CURSOR_MODELS.find((m) => m.id === `cursor-${modelId}`);
+  const cursorModel = CURSOR_MODELS.find((m) => m.id === `${PROVIDER_PREFIXES.cursor}${modelId}`);
   if (cursorModel) return cursorModel.label;
 
   // Check Cursor models (with cursor- prefix)
@@ -57,11 +58,11 @@ export function ModelOverrideTrigger({
 
   // Filter Cursor models to only show enabled ones
   const availableCursorModels = CURSOR_MODELS.filter((model) => {
-    const cursorId = model.id.replace('cursor-', '') as CursorModelId;
+    const cursorId = stripProviderPrefix(model.id) as CursorModelId;
     return enabledCursorModels.includes(cursorId);
   });
 
-  const handleSelect = (model: AgentModel | CursorModelId) => {
+  const handleSelect = (model: ModelAlias | CursorModelId) => {
     onModelChange(model);
     setOpen(false);
   };
@@ -162,7 +163,7 @@ export function ModelOverrideTrigger({
                 return (
                   <button
                     key={model.id}
-                    onClick={() => handleSelect(model.id as AgentModel)}
+                    onClick={() => handleSelect(model.id as ModelAlias)}
                     className={cn(
                       'px-3 py-2 rounded-lg text-xs font-medium text-center',
                       'transition-all duration-150',
@@ -190,7 +191,7 @@ export function ModelOverrideTrigger({
               </h5>
               <div className="grid grid-cols-2 gap-2">
                 {availableCursorModels.slice(0, 6).map((model) => {
-                  const cursorId = model.id.replace('cursor-', '') as CursorModelId;
+                  const cursorId = stripProviderPrefix(model.id) as CursorModelId;
                   const isActive = currentModel === cursorId;
                   return (
                     <button
