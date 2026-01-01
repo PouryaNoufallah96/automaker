@@ -7,12 +7,39 @@
 
 import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
 import { BaseProvider } from './base-provider.js';
+import { classifyError, getUserFriendlyErrorMessage } from '@automaker/utils';
 import type {
   ExecuteOptions,
   ProviderMessage,
   InstallationStatus,
   ModelDefinition,
 } from './types.js';
+
+// Explicit allowlist of environment variables to pass to the SDK.
+// Only these vars are passed - nothing else from process.env leaks through.
+const ALLOWED_ENV_VARS = [
+  'ANTHROPIC_API_KEY',
+  'PATH',
+  'HOME',
+  'SHELL',
+  'TERM',
+  'USER',
+  'LANG',
+  'LC_ALL',
+];
+
+/**
+ * Build environment for the SDK with only explicitly allowed variables
+ */
+function buildEnv(): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = {};
+  for (const key of ALLOWED_ENV_VARS) {
+    if (process.env[key]) {
+      env[key] = process.env[key];
+    }
+  }
+  return env;
+}
 
 export class ClaudeProvider extends BaseProvider {
   getName(): string {
@@ -36,16 +63,35 @@ export class ClaudeProvider extends BaseProvider {
     } = options;
 
     // Build Claude SDK options
+    // MCP permission logic - determines how to handle tool permissions when MCP servers are configured.
+    // This logic mirrors buildMcpOptions() in sdk-options.ts but is applied here since
+    // the provider is the final point where SDK options are constructed.
+    const hasMcpServers = options.mcpServers && Object.keys(options.mcpServers).length > 0;
+    // Default to true for autonomous workflow. Security is enforced when adding servers
+    // via the security warning dialog that explains the risks.
+    const mcpAutoApprove = options.mcpAutoApproveTools ?? true;
+    const mcpUnrestricted = options.mcpUnrestrictedTools ?? true;
     const defaultTools = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebSearch', 'WebFetch'];
-    const toolsToUse = allowedTools || defaultTools;
+
+    // Determine permission mode based on settings
+    const shouldBypassPermissions = hasMcpServers && mcpAutoApprove;
+    // Determine if we should restrict tools (only when no MCP or unrestricted is disabled)
+    const shouldRestrictTools = !hasMcpServers || !mcpUnrestricted;
 
     const sdkOptions: Options = {
       model,
       systemPrompt,
       maxTurns,
       cwd,
-      allowedTools: toolsToUse,
-      permissionMode: 'default',
+      // Pass only explicitly allowed environment variables to SDK
+      env: buildEnv(),
+      // Only restrict tools if explicitly set OR (no MCP / unrestricted disabled)
+      ...(allowedTools && shouldRestrictTools && { allowedTools }),
+      ...(!allowedTools && shouldRestrictTools && { allowedTools: defaultTools }),
+      // When MCP servers are configured and auto-approve is enabled, use bypassPermissions
+      permissionMode: shouldBypassPermissions ? 'bypassPermissions' : 'default',
+      // Required when using bypassPermissions mode
+      ...(shouldBypassPermissions && { allowDangerouslySkipPermissions: true }),
       abortController,
       // Resume existing SDK session if we have a session ID
       ...(sdkSessionId && conversationHistory && conversationHistory.length > 0
@@ -55,6 +101,8 @@ export class ClaudeProvider extends BaseProvider {
       ...(options.settingSources && { settingSources: options.settingSources }),
       // Forward sandbox configuration
       ...(options.sandbox && { sandbox: options.sandbox }),
+      // Forward MCP servers configuration
+      ...(options.mcpServers && { mcpServers: options.mcpServers }),
     };
 
     // Build prompt payload
@@ -88,9 +136,32 @@ export class ClaudeProvider extends BaseProvider {
         yield msg as ProviderMessage;
       }
     } catch (error) {
-      console.error('[ClaudeProvider] ERROR: executeQuery() error during execution:', error);
-      console.error('[ClaudeProvider] ERROR stack:', (error as Error).stack);
-      throw error;
+      // Enhance error with user-friendly message and classification
+      const errorInfo = classifyError(error);
+      const userMessage = getUserFriendlyErrorMessage(error);
+
+      console.error('[ClaudeProvider] executeQuery() error during execution:', {
+        type: errorInfo.type,
+        message: errorInfo.message,
+        isRateLimit: errorInfo.isRateLimit,
+        retryAfter: errorInfo.retryAfter,
+        stack: (error as Error).stack,
+      });
+
+      // Build enhanced error message with additional guidance for rate limits
+      const message = errorInfo.isRateLimit
+        ? `${userMessage}\n\nTip: If you're running multiple features in auto-mode, consider reducing concurrency (maxConcurrency setting) to avoid hitting rate limits.`
+        : userMessage;
+
+      const enhancedError = new Error(message);
+      (enhancedError as any).originalError = error;
+      (enhancedError as any).type = errorInfo.type;
+
+      if (errorInfo.isRateLimit) {
+        (enhancedError as any).retryAfter = errorInfo.retryAfter;
+      }
+
+      throw enhancedError;
     }
   }
 

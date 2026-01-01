@@ -13,6 +13,10 @@ export type {
   InstallationStatus,
   ValidationResult,
   ModelDefinition,
+  McpServerConfig,
+  McpStdioServerConfig,
+  McpSSEServerConfig,
+  McpHttpServerConfig,
 } from './provider.js';
 
 // Feature types
@@ -45,6 +49,21 @@ export { specOutputSchema } from './spec.js';
 // Enhancement types
 export type { EnhancementMode, EnhancementExample } from './enhancement.js';
 
+// Prompt customization types
+export type {
+  CustomPrompt,
+  AutoModePrompts,
+  AgentPrompts,
+  BacklogPlanPrompts,
+  EnhancementPrompts,
+  PromptCustomization,
+  ResolvedAutoModePrompts,
+  ResolvedAgentPrompts,
+  ResolvedBacklogPlanPrompts,
+  ResolvedEnhancementPrompts,
+} from './prompts.js';
+export { DEFAULT_PROMPT_CUSTOMIZATION } from './prompts.js';
+
 // Settings types and constants
 export type {
   ThemeMode,
@@ -54,6 +73,8 @@ export type {
   ModelProvider,
   KeyboardShortcuts,
   AIProfile,
+  MCPToolInfo,
+  MCPServerConfig,
   ProjectRef,
   TrashedProjectRef,
   ChatSessionRef,
@@ -87,6 +108,9 @@ export type {
   IssueValidationVerdict,
   IssueValidationConfidence,
   IssueComplexity,
+  PRRecommendation,
+  PRAnalysis,
+  LinkedPRInfo,
   IssueValidationInput,
   IssueValidationRequest,
   IssueValidationResult,
@@ -94,6 +118,9 @@ export type {
   IssueValidationErrorResponse,
   IssueValidationEvent,
   StoredValidation,
+  GitHubCommentAuthor,
+  GitHubComment,
+  IssueCommentsResult,
 } from './issue-validation.js';
 
 // Backlog plan types
@@ -113,3 +140,6 @@ export type {
   PipelineStatus,
   FeatureStatusWithPipeline,
 } from './pipeline.js';
+
+// Port configuration
+export { STATIC_PORT, SERVER_PORT, RESERVED_PORTS } from './ports.js';

@@ -8,9 +8,22 @@ import {
 } from '@/contexts/file-browser-context';
 import { useAppStore } from '@/store/app-store';
 import { useSetupStore } from '@/store/setup-store';
-import { getElectronAPI } from '@/lib/electron';
+import { getElectronAPI, isElectron } from '@/lib/electron';
+import { isMac } from '@/lib/utils';
+import {
+  initApiKey,
+  isElectronMode,
+  verifySession,
+  checkSandboxEnvironment,
+} from '@/lib/http-api-client';
 import { Toaster } from 'sonner';
 import { ThemeOption, themeOptions } from '@/config/theme-options';
+import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
+import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
+
+// Session storage key for sandbox risk acknowledgment
+const SANDBOX_RISK_ACKNOWLEDGED_KEY = 'automaker-sandbox-risk-acknowledged';
+const SANDBOX_DENIED_KEY = 'automaker-sandbox-denied';
 
 function RootLayoutContent() {
   const location = useLocation();
@@ -22,7 +35,23 @@ function RootLayoutContent() {
   const [setupHydrated, setSetupHydrated] = useState(
     () => useSetupStore.persist?.hasHydrated?.() ?? false
   );
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { openFileBrowser } = useFileBrowser();
+
+  // Sandbox environment check state
+  type SandboxStatus = 'pending' | 'containerized' | 'needs-confirmation' | 'denied' | 'confirmed';
+  const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus>(() => {
+    // Check if user previously denied in this session
+    if (sessionStorage.getItem(SANDBOX_DENIED_KEY)) {
+      return 'denied';
+    }
+    // Check if user previously acknowledged in this session
+    if (sessionStorage.getItem(SANDBOX_RISK_ACKNOWLEDGED_KEY)) {
+      return 'confirmed';
+    }
+    return 'pending';
+  });
 
   // Hidden streamer panel - opens with "\" key
   const handleStreamerPanelShortcut = useCallback((event: KeyboardEvent) => {
@@ -69,6 +98,110 @@ function RootLayoutContent() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Check sandbox environment on mount
+  useEffect(() => {
+    // Skip if already decided
+    if (sandboxStatus !== 'pending') {
+      return;
+    }
+
+    const checkSandbox = async () => {
+      try {
+        const result = await checkSandboxEnvironment();
+
+        if (result.isContainerized) {
+          // Running in a container, no warning needed
+          setSandboxStatus('containerized');
+        } else {
+          // Not containerized, show warning dialog
+          setSandboxStatus('needs-confirmation');
+        }
+      } catch (error) {
+        console.error('[Sandbox] Failed to check environment:', error);
+        // On error, assume not containerized and show warning
+        setSandboxStatus('needs-confirmation');
+      }
+    };
+
+    checkSandbox();
+  }, [sandboxStatus]);
+
+  // Handle sandbox risk confirmation
+  const handleSandboxConfirm = useCallback(() => {
+    sessionStorage.setItem(SANDBOX_RISK_ACKNOWLEDGED_KEY, 'true');
+    setSandboxStatus('confirmed');
+  }, []);
+
+  // Handle sandbox risk denial
+  const handleSandboxDeny = useCallback(async () => {
+    sessionStorage.setItem(SANDBOX_DENIED_KEY, 'true');
+
+    if (isElectron()) {
+      // In Electron mode, quit the application
+      // Use window.electronAPI directly since getElectronAPI() returns the HTTP client
+      try {
+        const electronAPI = window.electronAPI;
+        if (electronAPI?.quit) {
+          await electronAPI.quit();
+        } else {
+          console.error('[Sandbox] quit() not available on electronAPI');
+        }
+      } catch (error) {
+        console.error('[Sandbox] Failed to quit app:', error);
+      }
+    } else {
+      // In web mode, show rejection screen
+      setSandboxStatus('denied');
+    }
+  }, []);
+
+  // Initialize authentication
+  // - Electron mode: Uses API key from IPC (header-based auth)
+  // - Web mode: Uses HTTP-only session cookie
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Initialize API key for Electron mode
+        await initApiKey();
+
+        // In Electron mode, we're always authenticated via header
+        if (isElectronMode()) {
+          setIsAuthenticated(true);
+          setAuthChecked(true);
+          return;
+        }
+
+        // In web mode, verify the session cookie is still valid
+        // by making a request to an authenticated endpoint
+        const isValid = await verifySession();
+
+        if (isValid) {
+          setIsAuthenticated(true);
+          setAuthChecked(true);
+          return;
+        }
+
+        // Session is invalid or expired - redirect to login
+        console.log('Session invalid or expired - redirecting to login');
+        setIsAuthenticated(false);
+        setAuthChecked(true);
+
+        if (location.pathname !== '/login') {
+          navigate({ to: '/login' });
+        }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        setAuthChecked(true);
+        // On error, redirect to login to be safe
+        if (location.pathname !== '/login') {
+          navigate({ to: '/login' });
+        }
+      }
+    };
+
+    initAuth();
+  }, [location.pathname, navigate]);
 
   // Wait for setup store hydration before enforcing routing rules
   useEffect(() => {
@@ -147,19 +280,76 @@ function RootLayoutContent() {
     }
   }, [deferredTheme]);
 
-  // Setup view is full-screen without sidebar
+  // Login and setup views are full-screen without sidebar
   const isSetupRoute = location.pathname === '/setup';
+  const isLoginRoute = location.pathname === '/login';
+
+  // Show rejection screen if user denied sandbox risk (web mode only)
+  if (sandboxStatus === 'denied' && !isElectron()) {
+    return <SandboxRejectionScreen />;
+  }
+
+  // Show loading while checking sandbox environment
+  if (sandboxStatus === 'pending') {
+    return (
+      <main className="flex h-screen items-center justify-center" data-testid="app-container">
+        <div className="text-muted-foreground">Checking environment...</div>
+      </main>
+    );
+  }
+
+  // Show login page (full screen, no sidebar)
+  if (isLoginRoute) {
+    return (
+      <main className="h-screen overflow-hidden" data-testid="app-container">
+        <Outlet />
+        {/* Show sandbox dialog on top of login page if needed */}
+        <SandboxRiskDialog
+          open={sandboxStatus === 'needs-confirmation'}
+          onConfirm={handleSandboxConfirm}
+          onDeny={handleSandboxDeny}
+        />
+      </main>
+    );
+  }
+
+  // Wait for auth check before rendering protected routes (web mode only)
+  if (!isElectronMode() && !authChecked) {
+    return (
+      <main className="flex h-screen items-center justify-center" data-testid="app-container">
+        <div className="text-muted-foreground">Loading...</div>
+      </main>
+    );
+  }
+
+  // Redirect to login if not authenticated (web mode)
+  if (!isElectronMode() && !isAuthenticated) {
+    return null; // Will redirect via useEffect
+  }
 
   if (isSetupRoute) {
     return (
       <main className="h-screen overflow-hidden" data-testid="app-container">
         <Outlet />
+        {/* Show sandbox dialog on top of setup page if needed */}
+        <SandboxRiskDialog
+          open={sandboxStatus === 'needs-confirmation'}
+          onConfirm={handleSandboxConfirm}
+          onDeny={handleSandboxDeny}
+        />
       </main>
     );
   }
 
   return (
     <main className="flex h-screen overflow-hidden" data-testid="app-container">
+      {/* Full-width titlebar drag region for Electron window dragging */}
+      {isElectron() && (
+        <div
+          className={`fixed top-0 left-0 right-0 h-6 titlebar-drag-region z-40 pointer-events-none ${isMac ? 'pl-20' : ''}`}
+          aria-hidden="true"
+        />
+      )}
       <Sidebar />
       <div
         className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
@@ -175,6 +365,13 @@ function RootLayoutContent() {
         }`}
       />
       <Toaster richColors position="bottom-right" />
+
+      {/* Show sandbox dialog if needed */}
+      <SandboxRiskDialog
+        open={sandboxStatus === 'needs-confirmation'}
+        onConfirm={handleSandboxConfirm}
+        onDeny={handleSandboxDeny}
+      />
     </main>
   );
 }

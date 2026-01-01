@@ -11,6 +11,8 @@ import type {
   IssueValidationEvent,
   StoredValidation,
   AgentModel,
+  GitHubComment,
+  IssueCommentsResult,
 } from '@automaker/types';
 import { getJSON, setJSON, removeItem } from './storage';
 
@@ -24,6 +26,8 @@ export type {
   IssueValidationResponse,
   IssueValidationEvent,
   StoredValidation,
+  GitHubComment,
+  IssueCommentsResult,
 };
 
 export interface FileEntry {
@@ -91,7 +95,7 @@ import type {
 } from '@/types/electron';
 
 // Import HTTP API client (ES module)
-import { getHttpApiClient } from './http-api-client';
+import { getHttpApiClient, getServerUrlSync } from './http-api-client';
 
 // Feature type - Import from app-store
 import type { Feature } from '@/store/app-store';
@@ -102,6 +106,8 @@ export interface RunningAgent {
   projectPath: string;
   projectName: string;
   isAutoMode: boolean;
+  title?: string;
+  description?: string;
 }
 
 export interface RunningAgentsResult {
@@ -234,6 +240,19 @@ export interface GitHubAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   /** Subscribe to validation events */
   onValidationEvent: (callback: (event: IssueValidationEvent) => void) => () => void;
+  /** Fetch comments for a specific issue */
+  getIssueComments: (
+    projectPath: string,
+    issueNumber: number,
+    cursor?: string
+  ) => Promise<{
+    success: boolean;
+    comments?: GitHubComment[];
+    totalCount?: number;
+    hasNextPage?: boolean;
+    endCursor?: string;
+    error?: string;
+  }>;
 }
 
 // Feature Suggestions types
@@ -412,6 +431,8 @@ export interface SaveImageResult {
 
 export interface ElectronAPI {
   ping: () => Promise<string>;
+  getApiKey?: () => Promise<string | null>;
+  quit?: () => Promise<void>;
   openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
   openDirectory: () => Promise<DialogResult>;
   openFile: (options?: object) => Promise<DialogResult>;
@@ -674,7 +695,7 @@ export const checkServerAvailable = async (): Promise<boolean> => {
 
   serverCheckPromise = (async () => {
     try {
-      const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3008';
+      const serverUrl = import.meta.env.VITE_SERVER_URL || getServerUrlSync();
       const response = await fetch(`${serverUrl}/api/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(2000),
@@ -2670,6 +2691,8 @@ function createMockRunningAgentsAPI(): RunningAgentsAPI {
         projectPath: '/mock/project',
         projectName: 'Mock Project',
         isAutoMode: mockAutoModeRunning,
+        title: `Mock Feature Title for ${featureId}`,
+        description: 'This is a mock feature description for testing purposes.',
       }));
       return {
         success: true,
@@ -2784,6 +2807,15 @@ function createMockGitHubAPI(): GitHubAPI {
       mockValidationCallbacks.push(callback);
       return () => {
         mockValidationCallbacks = mockValidationCallbacks.filter((cb) => cb !== callback);
+      };
+    },
+    getIssueComments: async (projectPath: string, issueNumber: number, cursor?: string) => {
+      console.log('[Mock] Getting issue comments:', { projectPath, issueNumber, cursor });
+      return {
+        success: true,
+        comments: [],
+        totalCount: 0,
+        hasNextPage: false,
       };
     },
   };

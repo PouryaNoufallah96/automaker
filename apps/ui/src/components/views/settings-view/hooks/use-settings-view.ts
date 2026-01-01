@@ -3,6 +3,8 @@ import { useState, useCallback } from 'react';
 export type SettingsViewId =
   | 'api-keys'
   | 'claude'
+  | 'mcp-servers'
+  | 'prompts'
   | 'ai-enhancement'
   | 'appearance'
   | 'terminal'
