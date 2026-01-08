@@ -21,7 +21,7 @@ import {
 } from '@automaker/types';
 
 // Pattern definitions for Codex/OpenAI models
-const CODEX_MODEL_PREFIXES = ['gpt-'];
+const CODEX_MODEL_PREFIXES = ['codex-', 'gpt-'];
 const OPENAI_O_SERIES_PATTERN = /^o\d/;
 const OPENAI_O_SERIES_ALLOWED_MODELS = new Set<string>();
 
@@ -62,6 +62,12 @@ export function resolveModelString(
     return modelKey;
   }
 
+  // Codex model with explicit prefix (e.g., "codex-gpt-5.1-codex-max") - pass through unchanged
+  if (modelKey.startsWith(PROVIDER_PREFIXES.codex)) {
+    console.log(`[ModelResolver] Using Codex model: ${modelKey}`);
+    return modelKey;
+  }
+
   // Full Claude model string - pass through unchanged
   if (modelKey.includes('claude-')) {
     console.log(`[ModelResolver] Using full Claude model string: ${modelKey}`);
@@ -75,8 +81,7 @@ export function resolveModelString(
     return resolved;
   }
 
-  // OpenAI/Codex models - check BEFORE bare Cursor models since they overlap
-  // (Cursor supports gpt models, but bare "gpt-*" should route to Codex)
+  // OpenAI/Codex models - check for codex- or gpt- prefix
   if (
     CODEX_MODEL_PREFIXES.some((prefix) => modelKey.startsWith(prefix)) ||
     (OPENAI_O_SERIES_PATTERN.test(modelKey) && OPENAI_O_SERIES_ALLOWED_MODELS.has(modelKey))

@@ -10,12 +10,27 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Determine if the current model supports extended thinking controls
  * Note: This is for Claude's "thinking levels" only, not Codex's "reasoning effort"
+ *
+ * Rules:
+ * - Claude models: support thinking (sonnet-4.5-thinking, opus-4.5-thinking, etc.)
+ * - Cursor models: NO thinking controls (handled internally by Cursor CLI)
+ * - Codex models: NO thinking controls (they use reasoningEffort instead)
  */
 export function modelSupportsThinking(_model?: ModelAlias | string): boolean {
   if (!_model) return true;
 
-  // Codex models don't support Claude thinking levels - they use reasoning effort instead
-  if (_model.startsWith('gpt-') && _model in CODEX_MODEL_CONFIG_MAP) {
+  // Cursor models - don't show thinking controls
+  if (_model.startsWith('cursor-')) {
+    return false;
+  }
+
+  // Codex models - use reasoningEffort, not thinkingLevel
+  if (_model.startsWith('codex-')) {
+    return false;
+  }
+
+  // Bare gpt- models (legacy) - assume Codex, no thinking controls
+  if (_model.startsWith('gpt-')) {
     return false;
   }
 
@@ -35,13 +50,12 @@ export function getProviderFromModel(model?: string): ModelProvider {
     return 'cursor';
   }
 
-  // Check for Codex/OpenAI models (gpt- prefix or o-series)
-  const CODEX_MODEL_PREFIXES = ['gpt-'];
-  const OPENAI_O_SERIES_PATTERN = /^o\d/;
+  // Check for Codex/OpenAI models (codex- prefix, gpt- prefix, or o-series)
   if (
-    CODEX_MODEL_PREFIXES.some((prefix) => model.startsWith(prefix)) ||
-    OPENAI_O_SERIES_PATTERN.test(model) ||
-    model.startsWith('codex:')
+    model.startsWith('codex-') ||
+    model.startsWith('codex:') ||
+    model.startsWith('gpt-') ||
+    /^o\d/.test(model)
   ) {
     return 'codex';
   }
