@@ -87,7 +87,7 @@ export function getEmptyStateConfig(columnId: string): EmptyStateConfig {
   if (columnId.startsWith('pipeline_')) {
     return EMPTY_STATE_CONFIGS.pipeline_default;
   }
-  return EMPTY_STATE_CONFIGS[columnId] || EMPTY_STATE_CONFIGS.backlog;
+  return EMPTY_STATE_CONFIGS[columnId] || EMPTY_STATE_CONFIGS.default;
 }
 
 export interface Column {
