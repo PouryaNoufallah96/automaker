@@ -128,14 +128,21 @@ export function useBoardDragDrop({
           const targetBranch = worktreeData.branch;
           const currentBranch = draggedFeature.branchName;
 
+          // For main worktree, set branchName to null to indicate it should use main
+          // (must use null not undefined so it serializes to JSON for the API call)
+          // For other worktrees, set branchName to the target branch
+          const newBranchName = worktreeData.isMain ? null : targetBranch;
+
           // If already on the same branch, nothing to do
-          if (currentBranch === targetBranch) {
+          // For main worktree: feature with null/undefined branchName is already on main
+          // For other worktrees: compare branch names directly
+          const isAlreadyOnTarget = worktreeData.isMain
+            ? !currentBranch // null or undefined means already on main
+            : currentBranch === targetBranch;
+
+          if (isAlreadyOnTarget) {
             return;
           }
-
-          // For main worktree, set branchName to undefined/null to indicate it should use main
-          // For other worktrees, set branchName to the target branch
-          const newBranchName = worktreeData.isMain ? undefined : targetBranch;
 
           // Update feature's branchName
           updateFeature(featureId, { branchName: newBranchName });

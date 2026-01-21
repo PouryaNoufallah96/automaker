@@ -41,7 +41,7 @@ import type { FeatureLoader } from './feature-loader.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import { resolveModelString } from '@automaker/model-resolver';
 import { stripProviderPrefix } from '@automaker/types';
-import { getPromptCustomization, getActiveClaudeApiProfile } from '../lib/settings-helpers.js';
+import { getPromptCustomization, getProviderByModelId } from '../lib/settings-helpers.js';
 
 const logger = createLogger('IdeationService');
 
@@ -208,7 +208,27 @@ export class IdeationService {
       );
 
       // Resolve model alias to canonical identifier (with prefix)
-      const modelId = resolveModelString(options?.model ?? 'sonnet');
+      let modelId = resolveModelString(options?.model ?? 'sonnet');
+
+      // Try to find a provider for this model (e.g., GLM, MiniMax models)
+      let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
+      let credentials = await this.settingsService?.getCredentials();
+
+      if (this.settingsService && options?.model) {
+        const providerResult = await getProviderByModelId(
+          options.model,
+          this.settingsService,
+          '[IdeationService]'
+        );
+        if (providerResult.provider) {
+          claudeCompatibleProvider = providerResult.provider;
+          // Use resolved model from provider if available (maps to Claude model)
+          if (providerResult.resolvedModel) {
+            modelId = providerResult.resolvedModel;
+          }
+          credentials = providerResult.credentials ?? credentials;
+        }
+      }
 
       // Create SDK options
       const sdkOptions = createChatOptions({
@@ -223,13 +243,6 @@ export class IdeationService {
       // Strip provider prefix - providers need bare model IDs
       const bareModel = stripProviderPrefix(modelId);
 
-      // Get active Claude API profile for alternative endpoint configuration
-      const { profile: claudeApiProfile, credentials } = await getActiveClaudeApiProfile(
-        this.settingsService,
-        '[IdeationService]',
-        projectPath
-      );
-
       const executeOptions: ExecuteOptions = {
         prompt: message,
         model: bareModel,
@@ -239,7 +252,7 @@ export class IdeationService {
         maxTurns: 1, // Single turn for ideation
         abortController: activeSession.abortController!,
         conversationHistory: conversationHistory.length > 0 ? conversationHistory : undefined,
-        claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
+        claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
       };
 
@@ -687,12 +700,8 @@ export class IdeationService {
       // Strip provider prefix - providers need bare model IDs
       const bareModel = stripProviderPrefix(modelId);
 
-      // Get active Claude API profile for alternative endpoint configuration
-      const { profile: claudeApiProfile, credentials } = await getActiveClaudeApiProfile(
-        this.settingsService,
-        '[IdeationService]',
-        projectPath
-      );
+      // Get credentials for API calls (uses hardcoded model, no phase setting)
+      const credentials = await this.settingsService?.getCredentials();
 
       const executeOptions: ExecuteOptions = {
         prompt: prompt.prompt,
@@ -704,7 +713,6 @@ export class IdeationService {
         // Disable all tools - we just want text generation, not codebase analysis
         allowedTools: [],
         abortController: new AbortController(),
-        claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
       };
 

@@ -895,12 +895,15 @@ function RootLayoutContent() {
 }
 
 function RootLayout() {
+  // Hide devtools on compact screens (mobile/tablet) to avoid overlap with sidebar settings
+  const isCompact = useIsCompact();
+
   return (
     <QueryClientProvider client={queryClient}>
       <FileBrowserProvider>
         <RootLayoutContent />
       </FileBrowserProvider>
-      {SHOW_QUERY_DEVTOOLS ? (
+      {SHOW_QUERY_DEVTOOLS && !isCompact ? (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       ) : null}
     </QueryClientProvider>

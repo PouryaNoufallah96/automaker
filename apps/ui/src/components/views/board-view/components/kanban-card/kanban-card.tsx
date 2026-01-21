@@ -180,8 +180,10 @@ export const KanbanCard = memo(function KanbanCard({
     'kanban-card-content h-full relative',
     reduceEffects ? 'shadow-none' : 'shadow-sm',
     'transition-all duration-200 ease-out',
+    // Disable hover translate for in-progress cards to prevent gap showing gradient
     isInteractive &&
       !reduceEffects &&
+      !isCurrentAutoTask &&
       'hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/10 bg-transparent',
     !glassmorphism && 'backdrop-blur-[0px]!',
     !isCurrentAutoTask &&

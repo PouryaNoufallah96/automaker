@@ -142,7 +142,8 @@ export function BoardHeader({
             onConcurrencyChange={onConcurrencyChange}
             isAutoModeRunning={isAutoModeRunning}
             onAutoModeToggle={onAutoModeToggle}
-            onOpenAutoModeSettings={() => {}}
+            skipVerificationInAutoMode={skipVerificationInAutoMode}
+            onSkipVerificationChange={setSkipVerificationInAutoMode}
             onOpenPlanDialog={onOpenPlanDialog}
             showClaudeUsage={showClaudeUsage}
             showCodexUsage={showCodexUsage}

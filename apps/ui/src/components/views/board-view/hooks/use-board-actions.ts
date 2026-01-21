@@ -487,7 +487,15 @@ export function useBoardActions({
   const handleStartImplementation = useCallback(
     async (feature: Feature) => {
       // Check capacity for the feature's specific worktree, not the current view
-      const featureBranchName = feature.branchName ?? null;
+      // Normalize the branch name: if the feature's branch is the primary worktree branch,
+      // treat it as null (main worktree) to match how running tasks are stored
+      const rawBranchName = feature.branchName ?? null;
+      const featureBranchName =
+        currentProject?.path &&
+        rawBranchName &&
+        isPrimaryWorktreeBranch(currentProject.path, rawBranchName)
+          ? null
+          : rawBranchName;
       const featureWorktreeState = currentProject
         ? getAutoModeState(currentProject.id, featureBranchName)
         : null;
@@ -567,6 +575,7 @@ export function useBoardActions({
       handleRunFeature,
       currentProject,
       getAutoModeState,
+      isPrimaryWorktreeBranch,
     ]
   );
 

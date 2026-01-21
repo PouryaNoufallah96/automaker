@@ -17,11 +17,8 @@ export function useRunningFeatures({ runningFeatureIds, features }: UseRunningFe
 
         // Match by branchName only (worktreePath is no longer stored)
         if (feature.branchName) {
-          // Special case: if feature is on 'main' branch, it belongs to main worktree
-          // irrespective of whether the branch name matches exactly (it should, but strict equality might fail if refs differ)
-          if (worktree.isMain && feature.branchName === 'main') {
-            return true;
-          }
+          // Check if branch names match - this handles both main worktree (any primary branch name)
+          // and feature worktrees
           return worktree.branch === feature.branchName;
         }
 

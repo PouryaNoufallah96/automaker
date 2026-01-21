@@ -77,6 +77,7 @@ export function useAutoMode(worktree?: WorktreeInfo) {
     getWorktreeKey,
     getMaxConcurrencyForWorktree,
     setMaxConcurrencyForWorktree,
+    isPrimaryWorktreeBranch,
   } = useAppStore(
     useShallow((state) => ({
       autoModeByWorktree: state.autoModeByWorktree,
@@ -90,6 +91,7 @@ export function useAutoMode(worktree?: WorktreeInfo) {
       getWorktreeKey: state.getWorktreeKey,
       getMaxConcurrencyForWorktree: state.getMaxConcurrencyForWorktree,
       setMaxConcurrencyForWorktree: state.setMaxConcurrencyForWorktree,
+      isPrimaryWorktreeBranch: state.isPrimaryWorktreeBranch,
     }))
   );
 
@@ -197,8 +199,20 @@ export function useAutoMode(worktree?: WorktreeInfo) {
       }
 
       // Extract branchName from event, defaulting to null (main worktree)
-      const eventBranchName: string | null =
+      const rawEventBranchName: string | null =
         'branchName' in event && event.branchName !== undefined ? event.branchName : null;
+
+      // Get projectPath for worktree lookup
+      const eventProjectPath = 'projectPath' in event ? event.projectPath : currentProject?.path;
+
+      // Normalize branchName: convert primary worktree branch to null for consistent key lookup
+      // This handles cases where the main branch is named something other than 'main' (e.g., 'master', 'develop')
+      const eventBranchName: string | null =
+        eventProjectPath &&
+        rawEventBranchName &&
+        isPrimaryWorktreeBranch(eventProjectPath, rawEventBranchName)
+          ? null
+          : rawEventBranchName;
 
       // Skip event if we couldn't determine the project
       if (!eventProjectId) {
@@ -493,6 +507,7 @@ export function useAutoMode(worktree?: WorktreeInfo) {
     currentProject?.path,
     getMaxConcurrencyForWorktree,
     setMaxConcurrencyForWorktree,
+    isPrimaryWorktreeBranch,
   ]);
 
   // Start auto mode - calls backend to start the auto loop for this worktree

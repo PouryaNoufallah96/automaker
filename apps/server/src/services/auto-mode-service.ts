@@ -68,11 +68,27 @@ import {
   filterClaudeMdFromContext,
   getMCPServersFromSettings,
   getPromptCustomization,
-  getActiveClaudeApiProfile,
+  getProviderByModelId,
+  getPhaseModelWithOverrides,
 } from '../lib/settings-helpers.js';
 import { getNotificationService } from './notification-service.js';
 
 const execAsync = promisify(exec);
+
+/**
+ * Get the current branch name for a git repository
+ * @param projectPath - Path to the git repository
+ * @returns The current branch name, or null if not in a git repo or on detached HEAD
+ */
+async function getCurrentBranch(projectPath: string): Promise<string | null> {
+  try {
+    const { stdout } = await execAsync('git branch --show-current', { cwd: projectPath });
+    const branch = stdout.trim();
+    return branch || null;
+  } catch {
+    return null;
+  }
+}
 
 // PlanningMode type is imported from @automaker/types
 
@@ -635,7 +651,7 @@ export class AutoModeService {
       iterationCount++;
       try {
         // Count running features for THIS project/worktree only
-        const projectRunningCount = this.getRunningCountForWorktree(projectPath, branchName);
+        const projectRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
 
         // Check if we have capacity for this project/worktree
         if (projectRunningCount >= projectState.config.maxConcurrency) {
@@ -728,20 +744,24 @@ export class AutoModeService {
   /**
    * Get count of running features for a specific worktree
    * @param projectPath - The project path
-   * @param branchName - The branch name, or null for main worktree (features without branchName or with "main")
+   * @param branchName - The branch name, or null for main worktree (features without branchName or matching primary branch)
    */
-  private getRunningCountForWorktree(projectPath: string, branchName: string | null): number {
-    const normalizedBranch = branchName === 'main' ? null : branchName;
+  private async getRunningCountForWorktree(
+    projectPath: string,
+    branchName: string | null
+  ): Promise<number> {
+    // Get the actual primary branch name for the project
+    const primaryBranch = await getCurrentBranch(projectPath);
+
     let count = 0;
     for (const [, feature] of this.runningFeatures) {
       // Filter by project path AND branchName to get accurate worktree-specific count
       const featureBranch = feature.branchName ?? null;
-      if (normalizedBranch === null) {
-        // Main worktree: match features with branchName === null OR branchName === "main"
-        if (
-          feature.projectPath === projectPath &&
-          (featureBranch === null || featureBranch === 'main')
-        ) {
+      if (branchName === null) {
+        // Main worktree: match features with branchName === null OR branchName matching primary branch
+        const isPrimaryBranch =
+          featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
+        if (feature.projectPath === projectPath && isPrimaryBranch) {
           count++;
         }
       } else {
@@ -790,7 +810,7 @@ export class AutoModeService {
     // Remove from map
     this.autoLoopsByProject.delete(worktreeKey);
 
-    return this.getRunningCountForWorktree(projectPath, branchName);
+    return await this.getRunningCountForWorktree(projectPath, branchName);
   }
 
   /**
@@ -1025,7 +1045,7 @@ export class AutoModeService {
     const maxAgents = await this.resolveMaxConcurrency(projectPath, branchName);
 
     // Get current running count for this worktree
-    const currentAgents = this.getRunningCountForWorktree(projectPath, branchName);
+    const currentAgents = await this.getRunningCountForWorktree(projectPath, branchName);
 
     return {
       hasCapacity: currentAgents < maxAgents,
@@ -2377,13 +2397,24 @@ Address the follow-up instructions above. Review the previous work and make the 
 Format your response as a structured markdown document.`;
 
     try {
-      // Get model from phase settings
-      const settings = await this.settingsService?.getGlobalSettings();
-      const phaseModelEntry =
-        settings?.phaseModels?.projectAnalysisModel || DEFAULT_PHASE_MODELS.projectAnalysisModel;
+      // Get model from phase settings with provider info
+      const {
+        phaseModel: phaseModelEntry,
+        provider: analysisClaudeProvider,
+        credentials,
+      } = await getPhaseModelWithOverrides(
+        'projectAnalysisModel',
+        this.settingsService,
+        projectPath,
+        '[AutoMode]'
+      );
       const { model: analysisModel, thinkingLevel: analysisThinkingLevel } =
         resolvePhaseModel(phaseModelEntry);
-      logger.info('Using model for project analysis:', analysisModel);
+      logger.info(
+        'Using model for project analysis:',
+        analysisModel,
+        analysisClaudeProvider ? `via provider: ${analysisClaudeProvider.name}` : 'direct API'
+      );
 
       const provider = ProviderFactory.getProviderForModel(analysisModel);
 
@@ -2405,13 +2436,6 @@ Format your response as a structured markdown document.`;
         thinkingLevel: analysisThinkingLevel,
       });
 
-      // Get active Claude API profile for alternative endpoint configuration
-      const { profile: claudeApiProfile, credentials } = await getActiveClaudeApiProfile(
-        this.settingsService,
-        '[AutoMode]',
-        projectPath
-      );
-
       const options: ExecuteOptions = {
         prompt,
         model: sdkOptions.model ?? analysisModel,
@@ -2421,8 +2445,8 @@ Format your response as a structured markdown document.`;
         abortController,
         settingSources: sdkOptions.settingSources,
         thinkingLevel: analysisThinkingLevel, // Pass thinking level
-        claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCompatibleProvider: analysisClaudeProvider, // Pass provider for alternative endpoint configuration
       };
 
       const stream = provider.executeQuery(options);
@@ -3017,6 +3041,10 @@ Format your response as a structured markdown document.`;
     // Features are stored in .automaker directory
     const featuresDir = getFeaturesDir(projectPath);
 
+    // Get the actual primary branch name for the project (e.g., "main", "master", "develop")
+    // This is needed to correctly match features when branchName is null (main worktree)
+    const primaryBranch = await getCurrentBranch(projectPath);
+
     try {
       const entries = await secureFs.readdir(featuresDir, {
         withFileTypes: true,
@@ -3056,17 +3084,21 @@ Format your response as a structured markdown document.`;
               (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0))
           ) {
             // Filter by branchName:
-            // - If branchName is null (main worktree), include features with branchName === null OR branchName === "main"
+            // - If branchName is null (main worktree), include features with:
+            //   - branchName === null, OR
+            //   - branchName === primaryBranch (e.g., "main", "master", "develop")
             // - If branchName is set, only include features with matching branchName
             const featureBranch = feature.branchName ?? null;
             if (branchName === null) {
-              // Main worktree: include features without branchName OR with branchName === "main"
-              // This handles both correct (null) and legacy ("main") cases
-              if (featureBranch === null || featureBranch === 'main') {
+              // Main worktree: include features without branchName OR with branchName matching primary branch
+              // This handles repos where the primary branch is named something other than "main"
+              const isPrimaryBranch =
+                featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
+              if (isPrimaryBranch) {
                 pendingFeatures.push(feature);
               } else {
                 logger.debug(
-                  `[loadPendingFeatures] Filtering out feature ${feature.id} (branchName: ${featureBranch}) for main worktree`
+                  `[loadPendingFeatures] Filtering out feature ${feature.id} (branchName: ${featureBranch}, primaryBranch: ${primaryBranch}) for main worktree`
                 );
               }
             } else {
@@ -3463,16 +3495,37 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       );
     }
 
-    // Get active Claude API profile for alternative endpoint configuration
-    const { profile: claudeApiProfile, credentials } = await getActiveClaudeApiProfile(
-      this.settingsService,
-      '[AutoMode]',
-      finalProjectPath
-    );
+    // Get credentials for API calls (model comes from request, no phase model)
+    const credentials = await this.settingsService?.getCredentials();
+
+    // Try to find a provider for the model (if it's a provider model like "GLM-4.7")
+    // This allows users to select provider models in the Auto Mode / Feature execution
+    let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
+    let providerResolvedModel: string | undefined;
+    if (finalModel && this.settingsService) {
+      const providerResult = await getProviderByModelId(
+        finalModel,
+        this.settingsService,
+        '[AutoMode]'
+      );
+      if (providerResult.provider) {
+        claudeCompatibleProvider = providerResult.provider;
+        providerResolvedModel = providerResult.resolvedModel;
+        logger.info(
+          `[AutoMode] Using provider "${providerResult.provider.name}" for model "${finalModel}"` +
+            (providerResolvedModel ? ` -> resolved to "${providerResolvedModel}"` : '')
+        );
+      }
+    }
+
+    // Use the resolved model if available (from mapsToClaudeModel), otherwise use bareModel
+    const effectiveBareModel = providerResolvedModel
+      ? stripProviderPrefix(providerResolvedModel)
+      : bareModel;
 
     const executeOptions: ExecuteOptions = {
       prompt: promptContent,
-      model: bareModel,
+      model: effectiveBareModel,
       maxTurns: maxTurns,
       cwd: workDir,
       allowedTools: allowedTools,
@@ -3481,8 +3534,8 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       settingSources: sdkOptions.settingSources,
       mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined, // Pass MCP servers configuration
       thinkingLevel: options?.thinkingLevel, // Pass thinking level for extended thinking
-      claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
       credentials, // Pass credentials for resolving 'credentials' apiKeySource
+      claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
     };
 
     // Execute via provider
@@ -3788,8 +3841,8 @@ After generating the revised spec, output:
                           allowedTools: allowedTools,
                           abortController,
                           mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined,
-                          claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
                           credentials, // Pass credentials for resolving 'credentials' apiKeySource
+                          claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
                         });
 
                         let revisionText = '';
@@ -3937,8 +3990,8 @@ After generating the revised spec, output:
                       allowedTools: allowedTools,
                       abortController,
                       mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined,
-                      claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
                       credentials, // Pass credentials for resolving 'credentials' apiKeySource
+                      claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
                     });
 
                     let taskOutput = '';
@@ -4037,8 +4090,8 @@ After generating the revised spec, output:
                     allowedTools: allowedTools,
                     abortController,
                     mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined,
-                    claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
                     credentials, // Pass credentials for resolving 'credentials' apiKeySource
+                    claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
                   });
 
                   for await (const msg of continuationStream) {

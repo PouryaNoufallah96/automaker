@@ -11,13 +11,13 @@ import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { createLogger } from '@automaker/utils';
-import { DEFAULT_PHASE_MODELS, isCursorModel, stripProviderPrefix } from '@automaker/types';
+import { isCursorModel, stripProviderPrefix } from '@automaker/types';
 import { resolvePhaseModel } from '@automaker/model-resolver';
 import { mergeCommitMessagePrompts } from '@automaker/prompts';
 import { ProviderFactory } from '../../../providers/provider-factory.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { getErrorMessage, logError } from '../common.js';
-import { getActiveClaudeApiProfile } from '../../../lib/settings-helpers.js';
+import { getPhaseModelWithOverrides } from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('GenerateCommitMessage');
 const execAsync = promisify(exec);
@@ -157,26 +157,29 @@ export function createGenerateCommitMessageHandler(
 
       const userPrompt = `Generate a commit message for these changes:\n\n\`\`\`diff\n${truncatedDiff}\n\`\`\``;
 
-      // Get model from phase settings
-      const settings = await settingsService?.getGlobalSettings();
-      const phaseModelEntry =
-        settings?.phaseModels?.commitMessageModel || DEFAULT_PHASE_MODELS.commitMessageModel;
-      const { model } = resolvePhaseModel(phaseModelEntry);
+      // Get model from phase settings with provider info
+      const {
+        phaseModel: phaseModelEntry,
+        provider: claudeCompatibleProvider,
+        credentials,
+      } = await getPhaseModelWithOverrides(
+        'commitMessageModel',
+        settingsService,
+        worktreePath,
+        '[GenerateCommitMessage]'
+      );
+      const { model, thinkingLevel } = resolvePhaseModel(phaseModelEntry);
 
-      logger.info(`Using model for commit message: ${model}`);
+      logger.info(
+        `Using model for commit message: ${model}`,
+        claudeCompatibleProvider ? `via provider: ${claudeCompatibleProvider.name}` : 'direct API'
+      );
 
       // Get the effective system prompt (custom or default)
       const systemPrompt = await getSystemPrompt(settingsService);
 
-      // Get active Claude API profile for alternative endpoint configuration
-      const { profile: claudeApiProfile, credentials } = await getActiveClaudeApiProfile(
-        settingsService,
-        '[GenerateCommitMessage]',
-        worktreePath
-      );
-
       // Get provider for the model type
-      const provider = ProviderFactory.getProviderForModel(model);
+      const aiProvider = ProviderFactory.getProviderForModel(model);
       const bareModel = stripProviderPrefix(model);
 
       // For Cursor models, combine prompts since Cursor doesn't support systemPrompt separation
@@ -185,10 +188,10 @@ export function createGenerateCommitMessageHandler(
         : userPrompt;
       const effectiveSystemPrompt = isCursorModel(model) ? undefined : systemPrompt;
 
-      logger.info(`Using ${provider.getName()} provider for model: ${model}`);
+      logger.info(`Using ${aiProvider.getName()} provider for model: ${model}`);
 
       let responseText = '';
-      const stream = provider.executeQuery({
+      const stream = aiProvider.executeQuery({
         prompt: effectivePrompt,
         model: bareModel,
         cwd: worktreePath,
@@ -196,7 +199,8 @@ export function createGenerateCommitMessageHandler(
         maxTurns: 1,
         allowedTools: [],
         readOnly: true,
-        claudeApiProfile, // Pass active Claude API profile for alternative endpoint configuration
+        thinkingLevel, // Pass thinking level for extended thinking support
+        claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
       });
 
