@@ -11,7 +11,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import type { AutoModeEvent, SpecRegenerationEvent } from '@/types/electron';
 import type { IssueValidationEvent } from '@automaker/types';
-import { debounce, DebouncedFunction } from '@automaker/utils';
+import { debounce, type DebouncedFunction } from '@automaker/utils/debounce';
 import { useEventRecencyStore } from './use-event-recency';
 
 /**
