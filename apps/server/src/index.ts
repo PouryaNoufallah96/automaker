@@ -133,7 +133,8 @@ const BOX_CONTENT_WIDTH = 67;
     const hasCliAuth =
       indicators.hasStatsCacheWithActivity ||
       (indicators.hasSettingsFile && indicators.hasProjectsSessions) ||
-      (indicators.hasCredentialsFile && indicators.credentials?.hasOAuthToken);
+      (indicators.hasCredentialsFile &&
+        (indicators.credentials?.hasOAuthToken || indicators.credentials?.hasApiKey));
 
     if (hasCliAuth) {
       logger.info('✓ Claude Code CLI authentication detected');
