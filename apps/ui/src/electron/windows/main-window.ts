@@ -46,7 +46,8 @@ export function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    titleBarStyle: 'hiddenInset',
+    // titleBarStyle is macOS-only; use hiddenInset for native look on macOS
+    ...(process.platform === 'darwin' && { titleBarStyle: 'hiddenInset' as const }),
     backgroundColor: '#0a0a0a',
   };
 
