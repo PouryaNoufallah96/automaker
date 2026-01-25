@@ -68,6 +68,19 @@ export interface ShortcutKey {
   alt?: boolean; // Alt/Option key modifier
 }
 
+// Board background settings
+export interface BackgroundSettings {
+  imagePath: string | null;
+  imageVersion?: number;
+  cardOpacity: number;
+  columnOpacity: number;
+  columnBorderEnabled: boolean;
+  cardGlassmorphism: boolean;
+  cardBorderEnabled: boolean;
+  cardBorderOpacity: number;
+  hideScrollbar: boolean;
+}
+
 // Keyboard Shortcuts - stored as strings like "K", "Shift+N", "Cmd+K"
 export interface KeyboardShortcuts {
   // Navigation shortcuts

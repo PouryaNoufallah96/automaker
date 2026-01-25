@@ -5,11 +5,7 @@ import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { createLogger } from '@automaker/utils/logger';
 // Note: setItem/getItem moved to ./utils/theme-utils.ts
-import {
-  UI_SANS_FONT_OPTIONS,
-  UI_MONO_FONT_OPTIONS,
-  DEFAULT_FONT_VALUE,
-} from '@/config/ui-font-options';
+import { UI_SANS_FONT_OPTIONS, UI_MONO_FONT_OPTIONS } from '@/config/ui-font-options';
 import type {
   Feature as BaseFeature,
   FeatureImagePath,
@@ -63,6 +59,7 @@ import {
   type BoardViewMode,
   type ShortcutKey,
   type KeyboardShortcuts,
+  type BackgroundSettings,
   // Settings types
   type ApiKeys,
   // Chat types
@@ -111,6 +108,9 @@ import {
   isClaudeUsageAtLimit,
 } from './utils';
 
+// Import default values from modular defaults files
+import { defaultBackgroundSettings, defaultTerminalState, MAX_INIT_OUTPUT_LINES } from './defaults';
+
 // Import internal theme utils (not re-exported publicly)
 import {
   getEffectiveFont,
@@ -145,6 +145,7 @@ export type {
   BoardViewMode,
   ShortcutKey,
   KeyboardShortcuts,
+  BackgroundSettings,
   ApiKeys,
   ImageAttachment,
   TextFileAttachment,
@@ -189,6 +190,9 @@ export {
   isClaudeUsageAtLimit,
 };
 
+// Re-export defaults from ./defaults for backward compatibility
+export { defaultBackgroundSettings, defaultTerminalState, MAX_INIT_OUTPUT_LINES } from './defaults';
+
 // NOTE: Type definitions moved to ./types/ directory, utilities moved to ./utils/ directory
 // The following inline types have been replaced with imports above:
 // - ViewMode, ThemeMode, BoardViewMode (./types/ui-types.ts)
@@ -203,31 +207,10 @@ export {
 // - Theme utilities: THEME_STORAGE_KEY, getStoredTheme, getStoredFontSans, getStoredFontMono, etc. (./utils/theme-utils.ts)
 // - Shortcut utilities: parseShortcut, formatShortcut, DEFAULT_KEYBOARD_SHORTCUTS (./utils/shortcut-utils.ts)
 // - Usage utilities: isClaudeUsageAtLimit (./utils/usage-utils.ts)
-
-// Maximum number of output lines to keep in init script state (prevents unbounded memory growth)
-export const MAX_INIT_OUTPUT_LINES = 500;
-
-// Default background settings for board backgrounds
-export const defaultBackgroundSettings: {
-  imagePath: string | null;
-  imageVersion?: number;
-  cardOpacity: number;
-  columnOpacity: number;
-  columnBorderEnabled: boolean;
-  cardGlassmorphism: boolean;
-  cardBorderEnabled: boolean;
-  cardBorderOpacity: number;
-  hideScrollbar: boolean;
-} = {
-  imagePath: null,
-  cardOpacity: 100,
-  columnOpacity: 100,
-  columnBorderEnabled: true,
-  cardGlassmorphism: true,
-  cardBorderEnabled: true,
-  cardBorderOpacity: 100,
-  hideScrollbar: false,
-};
+// The following default values have been moved to ./defaults/:
+// - MAX_INIT_OUTPUT_LINES (./defaults/constants.ts)
+// - defaultBackgroundSettings (./defaults/background-settings.ts)
+// - defaultTerminalState (./defaults/terminal-defaults.ts)
 
 const initialState: AppState = {
   projects: [],
@@ -319,23 +302,7 @@ const initialState: AppState = {
   isAnalyzing: false,
   boardBackgroundByProject: {},
   previewTheme: null,
-  terminalState: {
-    isUnlocked: false,
-    authToken: null,
-    tabs: [],
-    activeTabId: null,
-    activeSessionId: null,
-    maximizedSessionId: null,
-    defaultFontSize: 14,
-    defaultRunScript: '',
-    screenReaderMode: false,
-    fontFamily: DEFAULT_FONT_VALUE,
-    scrollbackLines: 5000,
-    lineHeight: 1.0,
-    maxSessions: 100,
-    lastActiveProjectPath: null,
-    openTerminalMode: 'newTab',
-  },
+  terminalState: defaultTerminalState,
   terminalLayoutByProject: {},
   specCreatingForProject: null,
   defaultPlanningMode: 'skip' as PlanningMode,

@@ -25,7 +25,13 @@ import type {
   SidebarStyle,
 } from '@automaker/types';
 
-import type { ViewMode, ThemeMode, BoardViewMode, KeyboardShortcuts } from './ui-types';
+import type {
+  ViewMode,
+  ThemeMode,
+  BoardViewMode,
+  KeyboardShortcuts,
+  BackgroundSettings,
+} from './ui-types';
 import type { ApiKeys } from './settings-types';
 import type { ChatMessage, ChatSession, FeatureImage } from './chat-types';
 import type { TerminalState, TerminalPanelContent, PersistedTerminalState } from './terminal-types';
@@ -253,20 +259,7 @@ export interface AppState {
   isAnalyzing: boolean;
 
   // Board Background Settings (per-project, keyed by project path)
-  boardBackgroundByProject: Record<
-    string,
-    {
-      imagePath: string | null; // Path to background image in .automaker directory
-      imageVersion?: number; // Timestamp to bust browser cache when image is updated
-      cardOpacity: number; // Opacity of cards (0-100)
-      columnOpacity: number; // Opacity of columns (0-100)
-      columnBorderEnabled: boolean; // Whether to show column borders
-      cardGlassmorphism: boolean; // Whether to use glassmorphism (backdrop-blur) on cards
-      cardBorderEnabled: boolean; // Whether to show card borders
-      cardBorderOpacity: number; // Opacity of card borders (0-100)
-      hideScrollbar: boolean; // Whether to hide the board scrollbar
-    }
-  >;
+  boardBackgroundByProject: Record<string, BackgroundSettings>;
 
   // Theme Preview (for hover preview in theme selectors)
   previewTheme: ThemeMode | null;
