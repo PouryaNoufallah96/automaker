@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 // Note: persist middleware removed - settings now sync via API (use-settings-sync.ts)
 import type { Project, TrashedProject } from '@/lib/electron';
-import { getElectronAPI } from '@/lib/electron';
+import { saveProjects, saveTrashedProjects } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { createLogger } from '@automaker/utils/logger';
 // Note: setItem/getItem moved to ./utils/theme-utils.ts
@@ -360,7 +360,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     const trashedProject: TrashedProject = {
       ...project,
-      trashedAt: Date.now(),
+      trashedAt: new Date().toISOString(),
     };
 
     set((state) => ({
@@ -369,12 +369,9 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       currentProject: state.currentProject?.id === projectId ? null : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-      electronAPI.projects.setTrashedProjects(get().trashedProjects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
+    saveTrashedProjects(get().trashedProjects);
   },
 
   restoreTrashedProject: (projectId: string) => {
@@ -390,12 +387,9 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       trashedProjects: state.trashedProjects.filter((p) => p.id !== projectId),
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-      electronAPI.projects.setTrashedProjects(get().trashedProjects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
+    saveTrashedProjects(get().trashedProjects);
   },
 
   deleteTrashedProject: (projectId: string) => {
@@ -403,21 +397,15 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       trashedProjects: state.trashedProjects.filter((p) => p.id !== projectId),
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setTrashedProjects(get().trashedProjects);
-    }
+    // Persist to storage
+    saveTrashedProjects(get().trashedProjects);
   },
 
   emptyTrash: () => {
     set({ trashedProjects: [] });
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setTrashedProjects([]);
-    }
+    // Persist to storage
+    saveTrashedProjects([]);
   },
 
   setCurrentProject: (project) => {
@@ -474,14 +462,10 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     get().addProject(newProject);
     get().setCurrentProject(newProject);
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      // Small delay to ensure state is updated before persisting
-      setTimeout(() => {
-        electronAPI.projects.setProjects(get().projects);
-      }, 0);
-    }
+    // Persist to storage (small delay to ensure state is updated)
+    setTimeout(() => {
+      saveProjects(get().projects);
+    }, 0);
 
     return newProject;
   },
@@ -564,11 +548,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       ),
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   setProjectIcon: (projectId: string, icon: string | null) => {
@@ -576,27 +557,31 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       projects: state.projects.map((p) =>
         p.id === projectId ? { ...p, icon: icon ?? undefined } : p
       ),
+      // Also update currentProject if it's the one being modified
+      currentProject:
+        state.currentProject?.id === projectId
+          ? { ...state.currentProject, icon: icon ?? undefined }
+          : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   setProjectCustomIcon: (projectId: string, customIconPath: string | null) => {
     set((state) => ({
       projects: state.projects.map((p) =>
-        p.id === projectId ? { ...p, customIcon: customIconPath ?? undefined } : p
+        p.id === projectId ? { ...p, customIconPath: customIconPath ?? undefined } : p
       ),
+      // Also update currentProject if it's the one being modified
+      currentProject:
+        state.currentProject?.id === projectId
+          ? { ...state.currentProject, customIconPath: customIconPath ?? undefined }
+          : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   setProjectName: (projectId: string, name: string) => {
@@ -609,11 +594,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   // View actions
@@ -659,11 +641,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       );
     }
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
   getEffectiveTheme: () => {
     const state = get();
@@ -696,11 +675,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
   setProjectFontMono: (projectId: string, fontFamily: string | null) => {
     set((state) => ({
@@ -714,20 +690,17 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
   getEffectiveFontSans: () => {
     const state = get();
-    const projectFont = state.currentProject?.fontSans;
+    const projectFont = state.currentProject?.fontFamilySans;
     return getEffectiveFont(projectFont, state.fontFamilySans, UI_SANS_FONT_OPTIONS);
   },
   getEffectiveFontMono: () => {
     const state = get();
-    const projectFont = state.currentProject?.fontMono;
+    const projectFont = state.currentProject?.fontFamilyMono;
     return getEffectiveFont(projectFont, state.fontFamilyMono, UI_MONO_FONT_OPTIONS);
   },
 
@@ -744,11 +717,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           : state.currentProject,
     }));
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   // Project Phase Model Overrides
@@ -781,11 +751,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       };
     });
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   clearAllProjectPhaseModelOverrides: (projectId: string) => {
@@ -804,11 +771,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       };
     });
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   // Project Default Feature Model Override
@@ -830,11 +794,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       };
     });
 
-    // Persist to Electron store if available
-    const electronAPI = getElectronAPI();
-    if (electronAPI) {
-      electronAPI.projects.setProjects(get().projects);
-    }
+    // Persist to storage
+    saveProjects(get().projects);
   },
 
   // Feature actions
@@ -845,7 +806,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     })),
   addFeature: (feature) => {
     const id = feature.id ?? `feature-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const newFeature: Feature = { ...feature, id };
+    const newFeature = { ...feature, id } as Feature;
     set((state) => ({ features: [...state.features, newFeature] }));
     return newFeature;
   },
@@ -2471,8 +2432,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     try {
       const httpApi = getHttpApiClient();
-      const response = await httpApi.get('/api/codex/models');
-      const data = response.data as {
+      const data = await httpApi.get<{
         success: boolean;
         models?: Array<{
           id: string;
@@ -2484,7 +2444,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           isDefault: boolean;
         }>;
         error?: string;
-      };
+      }>('/api/codex/models');
 
       if (data.success && data.models) {
         set({
@@ -2542,8 +2502,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     try {
       const httpApi = getHttpApiClient();
-      const response = await httpApi.get('/api/opencode/models');
-      const data = response.data as {
+      const data = await httpApi.get<{
         success: boolean;
         models?: ModelDefinition[];
         providers?: Array<{
@@ -2553,7 +2512,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
           authMethod?: string;
         }>;
         error?: string;
-      };
+      }>('/api/opencode/models');
 
       if (data.success && data.models) {
         // Filter out Bedrock models
